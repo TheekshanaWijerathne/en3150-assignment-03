@@ -1,0 +1,22 @@
+# Run: model_b__adam__seed42
+# The headline resource-constrained model. Serves Section 3 (chosen optimizer),
+# Section 4 (A-vs-B table) and Section 6 (vs the SOTA backbones).
+# Owner: Member 3.
+extends: [data, models, training, evaluation]
+
+model:
+  name: model_b
+
+optimizer:
+  name: adam
+  lr: 0.001
+  weight_decay: 0.0001
+
+training:
+  epochs: 30
+
+notes: >-
+  Adam is the chosen optimizer. Justification for Section 3: depthwise kernels
+  carry 9 weights each while pointwise kernels carry hundreds, so their
+  gradient magnitudes differ by orders of magnitude and a single global SGD
+  learning rate cannot serve both. Adam's per-parameter adaptive step does.

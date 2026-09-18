@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edgecnn/norm_stats",
+  "title": "Normalisation statistics",
+  "description": "SEAM 1. data/splits/norm_stats.json - per-channel mean and standard deviation used to normalise every image, for every model, in every run. Produced by Member 1; applied inside build_dataloaders so no other member ever normalises anything themselves. Committed to git.",
+  "type": "object",
+  "required": ["mean", "std", "fitted_on", "num_images"],
+  "additionalProperties": false,
+  "properties": {
+    "mean": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": { "type": "number", "minimum": 0, "maximum": 1 },
+      "description": "Per-channel mean over pixel values scaled to [0, 1]."
+    },
+    "std": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+      "description": "Per-channel standard deviation. Must be strictly positive or normalisation divides by zero."
+    },
+    "fitted_on": {
+      "type": "string",
+      "const": "train",
+      "description": "Locked to 'train'. Fitting normalisation on val or test leaks held-out information into training, which would make the reported test accuracy dishonest. The schema refuses any other value on purpose."
+    },
+    "num_images": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "How many training images the statistics were computed over."
+    },
+    "pretrained_override": {
+      "type": "object",
+      "description": "Optional. ImageNet statistics, if Member 4 chooses to normalise the pretrained backbones the way their weights were trained. Using this is a documented deviation and must be mentioned in Section 5.",
+      "required": ["mean", "std", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "mean": { "type": "array", "items": { "type": "number" } },
+        "std": { "type": "array", "items": { "type": "number" } },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

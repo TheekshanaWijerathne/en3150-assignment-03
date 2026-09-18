@@ -1,0 +1,21 @@
+# Run: mobilenet_v2__adam__seed42
+# Section 5 - lightweight SOTA backbone #1, fine-tuned on the SAME splits.
+# Owner: Member 4.
+extends: [data, models, pretrained, training, evaluation]
+
+model:
+  name: mobilenet_v2
+
+optimizer:
+  name: adam
+  lr: 0.001            # head LR; the backbone uses lr_backbone via param_groups
+  weight_decay: 0.0001
+
+training:
+  epochs: 30
+
+notes: >-
+  Fine-tuned at 64x64, not upsampled to 224 - see the reasoning in
+  configs/stages/pretrained.yaml. MobileNetV2's 32x total stride leaves a 2x2
+  feature map at this resolution; that handicap is a finding for Section 6, not
+  a bug to hide.

@@ -1,0 +1,21 @@
+# Run: squeezenet1_1__adam__seed42
+# Section 5 - lightweight SOTA backbone #2, fine-tuned on the SAME splits.
+# Owner: Member 4.
+extends: [data, models, pretrained, training, evaluation]
+
+model:
+  name: squeezenet1_1
+
+optimizer:
+  name: adam
+  lr: 0.001
+  weight_decay: 0.0001
+
+training:
+  epochs: 30
+
+notes: >-
+  SqueezeNet's fire modules squeeze then expand with 1x1 convolutions - a
+  different route to parameter efficiency than MobileNet's depthwise
+  separables. Contrasting the two mechanisms, rather than just their accuracy
+  numbers, is what Section 6 rewards.

@@ -1,0 +1,91 @@
+# ===========================================================================
+# STAGE 1 - DATA                                        Assignment Section 1
+#
+# Owner:        Member 1
+# Produces for: Members 2, 3, 4  (this is SEAM 1 - everyone depends on it)
+# Entry point:  python scripts/prepare_data.py --config configs/stages/data.yaml
+# Code:         src/edgecnn/data/
+# ===========================================================================
+
+stage: data
+owner: member_1
+produces_for: [member_2, member_3, member_4]
+
+# --- INPUTS ----------------------------------------------------------------
+inputs:
+  dataset:
+    name: eurosat
+    # torchvision | folder | archive_url
+    # 'synthetic' is also accepted and is served from tests/fixtures/ - it is
+    # how Members 3 and 4 work before the real download lands. See the
+    # Phase 0 section of the root README.
+    source: torchvision
+    torchvision_class: EuroSAT
+    root: data/raw
+    download: true
+    # Recorded for the report's dataset citation (Section 1).
+    citation: >-
+      Helber et al., "EuroSAT: A Novel Dataset and Deep Learning Benchmark for
+      Land Use and Land Cover Classification", IEEE JSTARS, 2019.
+    expected_num_classes: 10
+    expected_num_images: 27000
+
+  image_size: [64, 64]
+  # EuroSAT is already 64x64. 'none' means no resize is applied; switch to
+  # 'bilinear' if the team ever changes dataset.
+  resize_mode: none
+
+  split:
+    train: 0.70
+    val: 0.15
+    test: 0.15
+    stratified: true          # preserve class proportions in all three splits
+    seed: 42
+
+  # Applied to the TRAIN split only. Val and test are never augmented -
+  # augmenting them would make the reported numbers unreproducible.
+  augmentation:
+    train:
+      - random_horizontal_flip
+      - random_vertical_flip   # valid for overhead satellite imagery
+      - random_rotation_90
+    val: []
+    test: []
+
+  normalization:
+    # Statistics are COMPUTED from the train split, never hard-coded and never
+    # fitted on val or test. Enforced by norm_stats.schema.json.
+    fit_on: train
+
+# --- OUTPUTS ---------------------------------------------------------------
+# These four paths are the entire surface Members 2, 3 and 4 see.
+outputs:
+  processed_dir:  data/processed/eurosat_64     # git-ignored, regenerable
+  split_manifest: data/splits/split_manifest.csv  # COMMITTED
+  split_meta:     data/splits/split_meta.json     # COMMITTED
+  norm_stats:     data/splits/norm_stats.json     # COMMITTED
+
+# --- CONTRACT --------------------------------------------------------------
+# What downstream members are entitled to assume. Enforced at runtime by
+# edgecnn.contracts.schema and in CI by tests/contracts/.
+contract:
+  python_api: edgecnn.data.build_dataloaders(cfg) -> edgecnn.contracts.DataBundle
+  schemas:
+    split_manifest: configs/contracts/split_manifest.schema.json
+    split_meta:     configs/contracts/split_meta.schema.json
+    norm_stats:     configs/contracts/norm_stats.schema.json
+  manifest_columns: [relative_path, label_index, label_name, split]
+  batch:
+    images:
+      dtype: float32
+      shape: [B, 3, 64, 64]
+      normalized: true
+    labels:
+      dtype: int64
+      shape: [B]
+      range: "[0, num_classes)"
+  guarantees:
+    - "class_names ordering is frozen once split_meta.json is committed"
+    - "normalisation statistics are fitted on the train split only"
+    - "the same manifest is used by every model, so splits are identical"
+    - "test rows are never returned by the train or val loaders"

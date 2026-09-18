@@ -1,0 +1,90 @@
+# ===========================================================================
+# STAGE 5 - SOTA FINE-TUNING                       Assignment Section 5 [20]
+#
+# Owner:        Member 4
+# Consumes:     SEAM 1 (the SAME splits as the custom models - required)
+# Produces for: Member 3 (trains them through the same Trainer),
+#               Member 1 (benchmarks them through the same benchmark code)
+# Code:         src/edgecnn/models/pretrained/
+#
+# Both backbones are taken from the list the assignment itself names.
+# They register into the SAME registry as Model A and Model B, so Member 3's
+# trainer and Member 1's evaluator need no special case for them. That is
+# what makes the Section 6 comparison fair.
+# ===========================================================================
+
+stage: pretrained
+owner: member_4
+produces_for: [member_3, member_1]
+
+# --- INPUTS ----------------------------------------------------------------
+inputs:
+  from_data_stage:
+    num_classes: 10
+    input_shape: [3, 64, 64]
+
+  # A DOCUMENTED DECISION, to be defended in Section 6:
+  # the backbones are fine-tuned at 64x64, not upsampled to their native 224.
+  # Upsampling would inflate MACs ~12x and measure the wrong thing - the point
+  # of the comparison is cost at the edge resolution the sensor actually
+  # produces. The penalty is real and worth discussing: MobileNetV2's 32x total
+  # stride leaves a 2x2 feature map at 64x64, so it cannot use the depth it was
+  # designed around. Set input_resolution: 128 to run that ablation.
+  input_resolution: 64
+
+  backbones:
+    - registry_key: mobilenet_v2
+      torchvision_name: mobilenet_v2
+      weights: IMAGENET1K_V1
+      # full | head_only | last_n_blocks
+      finetune_strategy: last_n_blocks
+      unfreeze_last_n: 3
+      replace_classifier: true
+      dropout: 0.2
+      lr_backbone: 0.0001      # small LR on pretrained weights...
+      lr_head: 0.001           # ...larger on the freshly initialised head
+
+    - registry_key: squeezenet1_1
+      torchvision_name: squeezenet1_1
+      weights: IMAGENET1K_V1
+      finetune_strategy: last_n_blocks
+      unfreeze_last_n: 2
+      replace_classifier: true
+      dropout: 0.5
+      lr_backbone: 0.0001
+      lr_head: 0.001
+
+  normalization:
+    # ImageNet statistics match what the pretrained weights expect. Using them
+    # instead of the EuroSAT train statistics is a deliberate deviation from
+    # the custom-model pipeline and MUST be stated in Section 5.
+    use_imagenet_stats: true
+    imagenet_mean: [0.485, 0.456, 0.406]
+    imagenet_std:  [0.229, 0.224, 0.225]
+
+# --- OUTPUTS ---------------------------------------------------------------
+outputs:
+  registry_keys: [mobilenet_v2, squeezenet1_1]
+  # Same layout as every other run - Member 1 and Member 3 need no special case.
+  checkpoint_best: artifacts/checkpoints/{run_id}/best.pt
+  history:         results/metrics/{run_id}/history.json
+  test_metrics:    results/metrics/{run_id}/test_metrics.json
+  resources:       results/metrics/{run_id}/resources.json
+
+# --- CONTRACT --------------------------------------------------------------
+contract:
+  python_api: >-
+    registered into edgecnn.models.registry, identical signature to the
+    custom models: build_model(name, num_classes, input_shape, **overrides)
+  forward:
+    input:  {dtype: float32, shape: [B, 3, 64, 64]}
+    output: {dtype: float32, shape: [B, num_classes], semantics: raw_logits}
+  guarantees:
+    - "uses the SAME split_manifest.csv as the custom models - assignment requirement"
+    - "classifier head replaced so the output width is num_classes, not 1000"
+    - "returns raw logits, exactly like the custom models"
+    - "reports BOTH trainable_params and total_params - they differ when frozen"
+    - "trained by Member 3's Trainer, benchmarked by Member 1's benchmark code"
+  param_group_api: >-
+    exposes param_groups() -> list[dict] so the trainer can apply lr_backbone
+    and lr_head without knowing anything about the architecture

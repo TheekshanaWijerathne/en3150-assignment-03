@@ -1,0 +1,22 @@
+# Run: model_b__sgd__seed42
+# Section 3 baseline (a): plain SGD, no momentum.
+# Identical to model_b__adam in every respect except the optimizer.
+# Owner: Member 3.
+extends: [data, models, training, evaluation]
+
+model:
+  name: model_b
+
+optimizer:
+  name: sgd
+  lr: 0.01
+  momentum: 0.0
+  weight_decay: 0.0001
+
+training:
+  epochs: 30
+
+notes: >-
+  Expect slower convergence and a noisier validation curve. The LR is 10x the
+  Adam LR because plain SGD takes raw-gradient-sized steps rather than
+  normalised ones; using 0.001 here would understate SGD unfairly.

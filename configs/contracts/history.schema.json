@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edgecnn/history",
+  "title": "Training history",
+  "description": "SEAM 3. results/metrics/<run_id>/history.json - the per-epoch training record. Produced by Member 3 (trainer); consumed by Member 3 for the Section 4 loss curves, by Member 1 for mean_epoch_time_s in resources.json, and by Member 4 for the Section 3 optimizer comparison. Committed to git so nobody re-runs training to redraw a plot.",
+  "type": "object",
+  "required": ["run_id", "model", "optimizer", "seed", "epochs"],
+  "additionalProperties": true,
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+__[a-z0-9_]+__seed[0-9]+$",
+      "description": "Must equal the directory name and be derived from edgecnn.contracts.paths.make_run_id."
+    },
+    "model": {
+      "type": "string",
+      "description": "Registry key, e.g. 'model_b'. Must match the model component of run_id."
+    },
+    "optimizer": {
+      "type": "string",
+      "enum": ["sgd", "sgd_momentum", "adam", "adamw", "rmsprop"],
+      "description": "Must match the optimizer component of run_id. Section 3 requires at least sgd, sgd_momentum and one chosen optimizer."
+    },
+    "seed": { "type": "integer" },
+    "device": {
+      "type": "string",
+      "description": "Hardware the run executed on. Section 4 requires the evaluation hardware to be reported, and epoch times are meaningless without it."
+    },
+    "epochs": {
+      "type": "array",
+      "minItems": 20,
+      "description": "One entry per completed epoch. minItems is 20 because the assignment mandates at least 20 epochs - a short debug run must not be committed as a result.",
+      "items": {
+        "type": "object",
+        "required": ["epoch", "train_loss", "val_loss", "train_acc", "val_acc", "lr", "epoch_time_s"],
+        "additionalProperties": true,
+        "properties": {
+          "epoch": { "type": "integer", "minimum": 1 },
+          "train_loss": { "type": "number", "minimum": 0 },
+          "val_loss": { "type": "number", "minimum": 0 },
+          "train_acc": { "type": "number", "minimum": 0, "maximum": 1 },
+          "val_acc": { "type": "number", "minimum": 0, "maximum": 1 },
+          "lr": { "type": "number", "minimum": 0, "description": "Learning rate actually used this epoch, after any scheduler step." },
+          "epoch_time_s": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Wall-clock seconds for the training pass plus the validation pass. Measured only by Member 3's trainer so every model is timed identically."
+          }
+        }
+      }
+    },
+    "best_epoch": { "type": "integer", "minimum": 1 },
+    "best_val_acc": { "type": "number", "minimum": 0, "maximum": 1 },
+    "total_train_time_s": { "type": "number", "minimum": 0 },
+    "hyperparameters": {
+      "type": "object",
+      "description": "Flat snapshot of what produced this run: learning rate, batch size, weight decay, momentum, scheduler, augmentation. Section 3 and 4 both require these to be stated.",
+      "additionalProperties": true
+    }
+  }
+}

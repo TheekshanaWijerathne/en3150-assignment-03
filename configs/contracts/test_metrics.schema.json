@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edgecnn/test_metrics",
+  "title": "Test-set metrics",
+  "description": "SEAM 4. results/metrics/<run_id>/test_metrics.json - accuracy, precision, recall and confusion matrix on the held-out test split. Produced by Member 1 (scripts/evaluate.py) for EVERY model, so that all four models are scored by the same code. Consumed by Member 4 for the Section 4 and Section 6 tables and the confusion-matrix figures. Committed to git.",
+  "type": "object",
+  "required": [
+    "run_id",
+    "model",
+    "split",
+    "accuracy",
+    "macro_precision",
+    "macro_recall",
+    "macro_f1",
+    "per_class",
+    "confusion_matrix",
+    "class_names",
+    "num_samples"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "run_id": { "type": "string", "pattern": "^[a-z0-9_]+__[a-z0-9_]+__seed[0-9]+$" },
+    "model": { "type": "string" },
+    "split": {
+      "type": "string",
+      "const": "test",
+      "description": "Locked to 'test'. Reported headline metrics come from the held-out split only."
+    },
+    "accuracy": { "type": "number", "minimum": 0, "maximum": 1 },
+    "macro_precision": {
+      "type": "number", "minimum": 0, "maximum": 1,
+      "description": "Unweighted mean of per-class precision. Macro rather than micro because micro-averaged precision equals accuracy for single-label classification, which would make the Section 4 table report the same number twice."
+    },
+    "macro_recall": { "type": "number", "minimum": 0, "maximum": 1 },
+    "macro_f1": { "type": "number", "minimum": 0, "maximum": 1 },
+    "weighted_precision": { "type": "number", "minimum": 0, "maximum": 1 },
+    "weighted_recall": { "type": "number", "minimum": 0, "maximum": 1 },
+    "per_class": {
+      "type": "object",
+      "minProperties": 2,
+      "description": "Keyed by class name. Drives the report's discussion of which classes get confused.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["precision", "recall", "f1", "support"],
+        "additionalProperties": false,
+        "properties": {
+          "precision": { "type": "number", "minimum": 0, "maximum": 1 },
+          "recall": { "type": "number", "minimum": 0, "maximum": 1 },
+          "f1": { "type": "number", "minimum": 0, "maximum": 1 },
+          "support": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "confusion_matrix": {
+      "type": "array",
+      "minItems": 2,
+      "description": "Square, raw counts (not normalised). Orientation is FROZEN: confusion_matrix[i][j] is the number of samples whose TRUE class is i and whose PREDICTED class is j. Rows therefore sum to each class's support. Row and column indices align with class_names.",
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "items": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "class_names": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "type": "string" },
+      "description": "Must be identical to split_meta.json.class_names."
+    },
+    "num_samples": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Test images evaluated. Must equal the sum of the confusion matrix and split_meta.json.counts.test."
+    },
+    "checkpoint": {
+      "type": "string",
+      "description": "Which checkpoint was evaluated, normally artifacts/checkpoints/<run_id>/best.pt."
+    },
+    "evaluated_utc": { "type": "string" }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edgecnn/split_manifest",
+  "title": "Split manifest row",
+  "description": "SEAM 1. One row of data/splits/split_manifest.csv, the single source of truth for which image belongs to which split. Produced by Member 1 (scripts/prepare_data.py); consumed by Members 2, 3 and 4 through edgecnn.data.build_dataloaders. The CSV header itself is checked by edgecnn.contracts.schema.MANIFEST_COLUMNS; this document validates the values in each row.",
+  "type": "object",
+  "required": ["relative_path", "label_index", "label_name", "split"],
+  "additionalProperties": false,
+  "properties": {
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\\\]+$",
+      "description": "Path to the image relative to outputs.processed_dir. POSIX forward slashes only - the team runs on both Windows and Linux and a backslash here makes the manifest machine-specific."
+    },
+    "label_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Integer class label. Must satisfy 0 <= label_index < num_classes and must agree with the position of label_name in split_meta.json.class_names. This ordering is frozen once the manifest is committed; every confusion matrix is indexed by it."
+    },
+    "label_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable class name, e.g. 'AnnualCrop'. Must equal split_meta.json.class_names[label_index]."
+    },
+    "split": {
+      "type": "string",
+      "enum": ["train", "val", "test"],
+      "description": "Which split this image belongs to. Assignment mandates 70/15/15. Rows marked 'test' must not be read by any training code - see TrainerProtocol."
+    }
+  }
+}

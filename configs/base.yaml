@@ -1,0 +1,58 @@
+# ===========================================================================
+# base.yaml - values shared by every stage and every run.
+#
+# Owner: Member 1.  Shared file: PR + 1 review to change.
+#
+# Loaded first by edgecnn.config.load_config, then overridden by the stage
+# configs an experiment extends, then by the experiment file itself.
+# All paths are relative to the repository root.
+# ===========================================================================
+
+project: en3150-a03-edgecnn
+
+# --- Reproducibility -------------------------------------------------------
+# Every committed run uses seed 42. Changing this invalidates the comparison
+# table, because the split itself is drawn from this seed.
+seed: 42
+
+# "auto" -> cuda if available, else cpu. Pin it to "cpu" when measuring
+# inference latency, so all four models are timed on the same hardware.
+device: auto
+deterministic: true          # cudnn.deterministic; slower but repeatable
+
+# --- Data geometry ---------------------------------------------------------
+# The assignment caps resolution at 64x64. EuroSAT is natively this size, so
+# there is no downscaling loss. Mirrored in contracts.types.INPUT_SHAPE.
+image_size: [64, 64]
+channels: 3
+
+# --- Repository layout -----------------------------------------------------
+# Mirrors edgecnn.contracts.paths. Code should prefer the Python constants;
+# these exist so a config can be read on its own and still make sense.
+paths:
+  raw_dir:         data/raw
+  processed_dir:   data/processed
+  splits_dir:      data/splits
+  checkpoints_dir: artifacts/checkpoints
+  metrics_dir:     results/metrics
+  figures_dir:     results/figures
+  tables_dir:      results/tables
+
+# --- Development escape hatch ---------------------------------------------
+# subset_fraction < 1.0 trains on a slice of the data for fast iteration.
+# MUST be 1.0 for any run whose results get committed; scripts/train.py
+# refuses to write to results/metrics/ when it is lower.
+subset_fraction: 1.0
+
+# --- DataLoader defaults ---------------------------------------------------
+dataloader:
+  batch_size: 64
+  num_workers: 4             # set to 0 on Windows if you hit worker errors
+  pin_memory: true
+  persistent_workers: true
+  drop_last: false
+
+# --- Logging ---------------------------------------------------------------
+logging:
+  level: INFO
+  progress_bar: true
