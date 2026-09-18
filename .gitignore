@@ -1,0 +1,71 @@
+# ---------------------------------------------------------------------------
+# EN3150 A03 - what stays out of the repository
+#
+# Rule of thumb: anything that can be REGENERATED from code + config is
+# ignored, EXCEPT results/metrics, results/figures and results/tables.
+# Those are committed on purpose - Member 4 cannot build the Section 6
+# comparison table without every other member's metrics JSON, and nobody
+# should have to re-run 20 epochs of training just to redraw a table.
+# See CONTRIBUTING.md -> "What is and is not committed".
+# ---------------------------------------------------------------------------
+
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Virtual environments ---------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# --- Tooling caches ---------------------------------------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# --- Datasets (large, downloadable, reproducible from configs/stages/data.yaml)
+data/raw/**
+data/processed/**
+!data/raw/README.md
+!data/processed/README.md
+
+# The split definition IS committed - it is the reproducibility contract.
+!data/splits/
+!data/splits/*.csv
+!data/splits/*.json
+!data/splits/README.md
+
+# --- Model weights (too large for git; regenerate with scripts/train.py) -----
+artifacts/checkpoints/**
+artifacts/exports/**
+!artifacts/checkpoints/README.md
+!artifacts/exports/README.md
+*.pt
+*.pth
+*.onnx
+*.tflite
+!tests/fixtures/**/*.pt
+
+# --- Editors / OS -----------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Report build leftovers -------------------------------------------------
+report/*.aux
+report/*.log
+report/*.out
+report/*.synctex.gz

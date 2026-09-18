@@ -1,0 +1,25 @@
+# Run: model_b__sgd_momentum__seed42
+# Section 3 baseline (b): SGD with momentum. Isolates the momentum term -
+# only `momentum` differs from model_b__sgd.yaml.
+# Owner: Member 3.
+extends: [data, models, training, evaluation]
+
+model:
+  name: model_b
+
+optimizer:
+  name: sgd_momentum
+  lr: 0.01
+  momentum: 0.9
+  nesterov: false
+  weight_decay: 0.0001
+
+training:
+  epochs: 30
+
+notes: >-
+  Section 3 asks explicitly for the impact of the momentum parameter. Discuss
+  both effects: the velocity term damps oscillation across narrow ravines in
+  the loss surface AND accelerates travel along consistently descending
+  directions - so report its effect on convergence SPEED and on FINAL accuracy
+  separately, since they are not the same claim.

@@ -1,0 +1,21 @@
+# Run: model_a__adam__seed42
+# Section 4 - the standard-CNN baseline that Model B is compared against.
+# Owner: Member 3.  Run with:
+#   python scripts/train.py --config configs/experiments/model_a__adam.yaml
+extends: [data, models, training, evaluation]
+
+model:
+  name: model_a
+
+optimizer:
+  name: adam
+  lr: 0.001
+  weight_decay: 0.0001
+
+training:
+  epochs: 30
+
+notes: >-
+  Unconstrained standard CNN. Its parameter count and MACs are the reference
+  point for the Section 4 discussion of what depthwise-separable convolutions
+  actually cost and save.

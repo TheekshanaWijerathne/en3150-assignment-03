@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edgecnn/resources",
+  "title": "Resource profile",
+  "description": "SEAM 4. results/metrics/<run_id>/resources.json - the cost half of the accuracy/memory/compute trade-off. Produced by Member 1 (benchmark.py) for every model through one code path, because a comparison table assembled from four differently-measured numbers cannot be defended. Consumed by Member 4 for Sections 4 and 6. Committed to git.",
+  "type": "object",
+  "required": [
+    "run_id",
+    "model",
+    "trainable_params",
+    "total_params",
+    "model_size_kb",
+    "macs",
+    "mean_epoch_time_s",
+    "inference_latency_ms",
+    "device"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "run_id": { "type": "string", "pattern": "^[a-z0-9_]+__[a-z0-9_]+__seed[0-9]+$" },
+    "model": { "type": "string" },
+    "trainable_params": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Parameters with requires_grad=True. For model_b this must be <= 100000 (assignment Section 2), which tests/test_param_budget.py asserts independently. For a partially frozen pretrained backbone this is smaller than total_params - report both in Section 5."
+    },
+    "total_params": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "All parameters including frozen ones. This, not trainable_params, determines memory footprint at inference."
+    },
+    "model_size_kb": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Serialised state_dict size on disk, in kilobytes. Always stored in KB; convert to MB for the Section 5 pretrained table. Storing one unit everywhere avoids a silent KB/MB mix-up that would make the Section 6 argument wrong rather than merely imprecise."
+    },
+    "macs": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Multiply-accumulate operations for ONE forward pass at input_shape. Counted with thop. This is the number that shows the depthwise-separable saving in Section 2, so Model A and Model B must be counted the same way."
+    },
+    "input_shape": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "integer", "minimum": 1 },
+      "description": "[C, H, W] the MACs and latency were measured at. Normally [3, 64, 64]. If Member 4 runs the 128px pretrained ablation, this records it."
+    },
+    "mean_epoch_time_s": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Copied from history.json, not re-measured. Section 4 asks for training time per epoch."
+    },
+    "inference_latency_ms": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Mean milliseconds for a single-image forward pass in eval mode, after warm-up, batch size 1 - the batch size an edge device actually uses."
+    },
+    "peak_mem_mb": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Peak activation + parameter memory during a forward pass. The binding constraint on a microcontroller, and often the real reason a model cannot be deployed."
+    },
+    "latency_batch_size": { "type": "integer", "minimum": 1, "default": 1 },
+    "latency_repeats": { "type": "integer", "minimum": 1 },
+    "device": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Hardware string, e.g. 'cpu (Intel i7-11800H)' or 'cuda:0 (RTX 3050)'. Timings are meaningless without it and Section 4 explicitly requires it. Latency for the edge argument should be measured on CPU across all models."
+    },
+    "measured_utc": { "type": "string" }
+  }
+}

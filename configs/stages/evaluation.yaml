@@ -1,0 +1,98 @@
+# ===========================================================================
+# STAGE 4 - EVALUATION, BENCHMARKING & REPORTING
+#                                    Assignment Sections 4 [25] + 6 [20]
+#
+# Owners:   Member 1 - metrics + resource benchmarking (SEAM 4 producer)
+#           Member 4 - aggregation into comparison tables (SEAM 5 producer)
+# Entry:    python scripts/evaluate.py           --config configs/experiments/<name>.yaml
+#           python scripts/build_report_assets.py --config configs/stages/evaluation.yaml
+# Code:     src/edgecnn/evaluation/
+#
+# Every model is scored by ONE code path. A comparison table assembled from
+# four differently-measured numbers cannot be defended in a viva.
+# ===========================================================================
+
+stage: evaluation
+owner: member_1              # metrics + benchmark
+co_owner: member_4           # reporting + tables
+
+# --- INPUTS ----------------------------------------------------------------
+inputs:
+  checkpoint: artifacts/checkpoints/{run_id}/best.pt
+  data_split: test           # locked: headline numbers come from held-out data
+  history:    results/metrics/{run_id}/history.json
+
+  metrics:
+    average: macro           # macro, not micro: micro-precision equals accuracy
+                             # for single-label classification, which would put
+                             # the same number in two columns of the table
+    include_per_class: true
+    confusion_matrix:
+      normalize: false       # store raw counts; normalise at plot time only
+
+  benchmark:
+    # Latency is measured on CPU for EVERY model, including on a CUDA machine.
+    # The Section 6 argument is about edge deployment, and edge devices do not
+    # have a GPU. Mixing CPU and GPU timings would make the column meaningless.
+    latency_device: cpu
+    latency_batch_size: 1    # the batch size an edge device actually uses
+    latency_warmup: 10
+    latency_repeats: 100
+    count_macs: true         # via thop
+    measure_peak_memory: true
+    model_size_from: state_dict
+
+# --- Section 6 reporting ---------------------------------------------------
+reporting:
+  # Member 4 discovers runs from results/metrics/ rather than hard-coding them,
+  # so a run joins the tables as soon as its JSON is committed.
+  discover_runs: true
+  tables:
+    - name: custom_model_comparison     # Section 4: Model A vs Model B
+      runs: [model_a__adam__seed42, model_b__adam__seed42]
+      columns: [model, trainable_params, model_size_kb, macs,
+                mean_epoch_time_s, test_accuracy]
+    - name: optimizer_comparison        # Section 3: sgd vs sgd+momentum vs adam
+      runs: [model_b__sgd__seed42, model_b__sgd_momentum__seed42,
+             model_b__adam__seed42]
+      columns: [optimizer, lr, best_epoch, best_val_acc, test_accuracy,
+                epochs_to_90pct_best, mean_epoch_time_s]
+    - name: final_comparison            # Section 6: Model B vs the SOTA models
+      runs: [model_b__adam__seed42, mobilenet_v2__adam__seed42,
+             squeezenet1_1__adam__seed42]
+      columns: [model, trainable_params, total_params, model_size_kb, macs,
+                inference_latency_ms, peak_mem_mb, test_accuracy,
+                macro_precision, macro_recall]
+  figures:
+    - loss_curves_per_run
+    - loss_curves_optimizer_overlay     # all three optimizers on one axis
+    - confusion_matrix_per_run
+    - accuracy_vs_params_scatter        # the trade-off, in one picture
+    - accuracy_vs_macs_scatter
+  export_to: report/figures
+
+# --- OUTPUTS ---------------------------------------------------------------
+outputs:
+  # Member 1, per run - COMMITTED
+  test_metrics: results/metrics/{run_id}/test_metrics.json
+  resources:    results/metrics/{run_id}/resources.json
+  # Member 4, across runs - COMMITTED
+  tables_dir:   results/tables
+  figures_dir:  results/figures
+  report_figures_dir: report/figures
+
+# --- CONTRACT --------------------------------------------------------------
+contract:
+  python_api:
+    - "edgecnn.evaluation.metrics.compute_metrics(y_true, y_pred, class_names) -> EvalResult"
+    - "edgecnn.evaluation.benchmark.profile_model(model, input_shape, ...) -> ResourceProfile"
+    - "edgecnn.evaluation.reporting.build_tables() -> dict[str, Path]"
+  schemas:
+    test_metrics: configs/contracts/test_metrics.schema.json
+    resources:    configs/contracts/resources.schema.json
+  confusion_matrix_orientation: "cm[i][j] = true class i predicted as j"
+  guarantees:
+    - "every model is scored by the same compute_metrics call"
+    - "every model is profiled by the same profile_model call, on the same device"
+    - "class_names ordering matches split_meta.json exactly"
+    - "metrics JSON is committed so tables rebuild without re-running training"

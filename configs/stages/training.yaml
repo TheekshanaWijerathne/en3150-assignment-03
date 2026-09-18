@@ -1,0 +1,105 @@
+# ===========================================================================
+# STAGE 3 - TRAINING & OPTIMIZATION        Assignment Sections 3 [15] + 4 [25]
+#
+# Owner:        Member 3
+# Consumes:     SEAM 1 (DataBundle, Member 1) + SEAM 2 (build_model, Members 2/4)
+# Produces for: Member 1 (evaluates the checkpoint), Member 4 (aggregates)
+# Entry point:  python scripts/train.py --config configs/experiments/<name>.yaml
+# Code:         src/edgecnn/training/
+# ===========================================================================
+
+stage: training
+owner: member_3
+produces_for: [member_1, member_4]
+
+# --- INPUTS ----------------------------------------------------------------
+inputs:
+  data:  "SEAM 1: edgecnn.data.build_dataloaders(cfg) -> DataBundle"
+  model: "SEAM 2: edgecnn.models.registry.build_model(cfg.model_name, ...)"
+
+  training:
+    epochs: 30                # assignment minimum is 20; 30 leaves headroom
+                              # for early stopping to actually trigger
+    loss: cross_entropy
+    label_smoothing: 0.0
+    grad_clip_norm: null
+    amp: false                # keep off: mixed precision distorts the epoch
+                              # timings that Section 4 compares
+
+  # Defaults; each experiment file overrides `optimizer` wholesale.
+  optimizer:
+    name: adam
+    lr: 0.001
+    weight_decay: 0.0001
+
+  scheduler:
+    name: cosine              # none | step | cosine | reduce_on_plateau
+    warmup_epochs: 0
+    min_lr: 0.00001
+
+  early_stopping:
+    enabled: true
+    monitor: val_acc
+    mode: max
+    patience: 8
+    # Even when early stopping fires, at least 20 epochs must be recorded -
+    # history.schema.json enforces minItems: 20 on the epochs array.
+    min_epochs: 20
+
+  checkpointing:
+    monitor: val_acc
+    mode: max
+    save_best: true
+    save_last: true
+
+# --- Section 3: the optimizer study ---------------------------------------
+# Run by scripts/run_optimizer_study.py. Three runs, identical in every
+# respect except the optimizer, so the comparison isolates one variable.
+optimizer_study:
+  model: model_b              # the resource-constrained model is the subject
+  seeds: [42]
+  variants:
+    - name: sgd
+      lr: 0.01
+      momentum: 0.0
+      weight_decay: 0.0001
+    - name: sgd_momentum
+      lr: 0.01
+      momentum: 0.9
+      weight_decay: 0.0001
+      nesterov: false
+    - name: adam               # the chosen optimizer
+      lr: 0.001
+      betas: [0.9, 0.999]
+      weight_decay: 0.0001
+  # The argument Member 3 needs to make in the report, backed by these curves:
+  #   Adam's per-parameter adaptive step suits a depthwise-separable network,
+  #   where depthwise kernels (9 weights each) and pointwise kernels (hundreds)
+  #   receive gradients of very different magnitude - one global SGD learning
+  #   rate cannot serve both well. Momentum recovers much of the gap by
+  #   accumulating a velocity term that damps oscillation across ravines and
+  #   accelerates along consistent descent directions; explain the effect on
+  #   BOTH convergence speed and final accuracy, as Section 3 asks.
+
+# --- OUTPUTS ---------------------------------------------------------------
+outputs:
+  checkpoint_best: artifacts/checkpoints/{run_id}/best.pt   # git-ignored
+  checkpoint_last: artifacts/checkpoints/{run_id}/last.pt   # git-ignored
+  history:         results/metrics/{run_id}/history.json    # COMMITTED
+  curves_figure:   results/figures/{run_id}/curves.png      # COMMITTED
+
+# --- CONTRACT --------------------------------------------------------------
+contract:
+  python_api: >-
+    edgecnn.training.Trainer(cfg).fit(model, data, cfg)
+    -> edgecnn.contracts.TrainResult
+  schemas:
+    history: configs/contracts/history.schema.json
+  checkpoint_keys:
+    [model_name, state_dict, epoch, val_acc, class_names, input_shape, seed, config_snapshot]
+  guarantees:
+    - "NEVER touches DataBundle.test - the held-out split stays clean until evaluation"
+    - "never imports a model module directly; only build_model(), so the loop is model-agnostic"
+    - "epoch_time_s covers the train pass plus the val pass, measured identically for every model"
+    - "records at least 20 epochs in history.json"
+    - "refuses to write to results/metrics/ when subset_fraction < 1.0"
