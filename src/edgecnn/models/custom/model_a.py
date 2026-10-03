@@ -22,12 +22,12 @@ accuracy and save in compute.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import torch
+from torch import nn
 
+from edgecnn.config.loader import load_stage
+from edgecnn.models.custom.blocks import conv_bn_act, get_activation
 from edgecnn.models.registry import register
-
-if TYPE_CHECKING:
-    from torch import nn
 
 
 @register("model_a")
@@ -60,4 +60,53 @@ def build_model_a(
         * derive per-layer parameter counts BY HAND for the report; Section 2
           asks for the calculation, not a torchsummary dump
     """
-    raise NotImplementedError("Member 2: implement Model A")
+    # Settings: the model_a section of models.yaml, replaced by any overrides given.
+    settings = {**load_stage("models")["model_a"], **overrides}
+    blocks = settings["blocks"]
+    head = settings["head"]
+    activation = settings["activation"]
+    batch_norm = settings["batch_norm"]
+
+    # Conv part: [Conv -> BatchNorm -> activation -> MaxPool] for every block.
+    layers: list[nn.Module] = []
+    channels = input_shape[0]
+    for block in blocks:
+        conv_args = {k: block[k] for k in ("kernel_size", "stride", "padding") if k in block}
+        layers.append(
+            conv_bn_act(
+                channels,
+                block["out_channels"],
+                activation=activation,
+                batch_norm=batch_norm,
+                **conv_args,
+            )
+        )
+        if block.get("pool"):
+            layers.append(nn.MaxPool2d(block["pool"]))
+        channels = block["out_channels"]
+
+    # Turn the feature maps into one flat list of numbers.
+    if head["global_pool"]:
+        layers.append(nn.AdaptiveAvgPool2d(1))
+    layers.append(nn.Flatten())
+
+    # How many numbers come out of the Conv part? Find out with one dummy picture.
+    features = nn.Sequential(*layers)
+    features.eval()
+    with torch.no_grad():
+        in_features = features(torch.zeros(1, *input_shape)).shape[1]
+    features.train()
+
+    # FC part: [FC -> activation -> Dropout] for every hidden layer, then the final FC.
+    for units in head["fc_units"]:
+        layers.append(nn.Linear(in_features, units))
+        layers.append(get_activation(activation))
+        layers.append(nn.Dropout(head["dropout"]))
+        in_features = units
+    if not head["fc_units"]:
+        layers.append(nn.Dropout(head["dropout"]))  # no hidden layer: Dropout before the final FC
+    layers.append(nn.Linear(in_features, num_classes))  # raw scores, no softmax
+
+    model = nn.Sequential(*layers)
+    model.num_classes = num_classes
+    return model

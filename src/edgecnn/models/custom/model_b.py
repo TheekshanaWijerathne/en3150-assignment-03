@@ -20,12 +20,12 @@ MobileNetV2 and SqueezeNet.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import torch
+from torch import nn
 
+from edgecnn.config.loader import load_stage
+from edgecnn.models.custom.blocks import conv_bn_act, depthwise_separable_conv, get_activation
 from edgecnn.models.registry import register
-
-if TYPE_CHECKING:
-    from torch import nn
 
 
 @register("model_b")
@@ -75,4 +75,65 @@ def build_model_b(
         * work at batch size 1
         * hand-derive the per-layer parameter table for the report
     """
-    raise NotImplementedError("Member 2: implement Model B (<=100k trainable params)")
+    # Settings: the model_b section of models.yaml, replaced by any overrides given.
+    settings = {**load_stage("models")["model_b"], **overrides}
+    stem = settings["stem"]
+    blocks = settings["blocks"]
+    head = settings["head"]
+    activation = settings["activation"]
+    batch_norm = settings["batch_norm"]
+
+    # Stem: one normal Conv on the picture, [Conv -> BatchNorm -> activation].
+    stem_args = {k: stem[k] for k in ("kernel_size", "stride", "padding") if k in stem}
+    layers: list[nn.Module] = [
+        conv_bn_act(
+            input_shape[0],
+            stem["out_channels"],
+            activation=activation,
+            batch_norm=batch_norm,
+            **stem_args,
+        )
+    ]
+    channels = stem["out_channels"]
+
+    # Blocks: [depthwise separable Conv -> MaxPool] for every block.
+    for block in blocks:
+        conv_args = {k: block[k] for k in ("kernel_size", "stride", "padding") if k in block}
+        layers.append(
+            depthwise_separable_conv(
+                channels,
+                block["out_channels"],
+                activation=activation,
+                batch_norm=batch_norm,
+                **conv_args,
+            )
+        )
+        if block.get("pool"):
+            layers.append(nn.MaxPool2d(block["pool"]))
+        channels = block["out_channels"]
+
+    # Turn the feature maps into one flat list of numbers.
+    if head["global_pool"]:
+        layers.append(nn.AdaptiveAvgPool2d(1))
+    layers.append(nn.Flatten())
+
+    # How many numbers come out of the Conv part? Find out with one dummy picture.
+    features = nn.Sequential(*layers)
+    features.eval()
+    with torch.no_grad():
+        in_features = features(torch.zeros(1, *input_shape)).shape[1]
+    features.train()
+
+    # FC part: [FC -> activation -> Dropout] for every hidden layer, then the final FC.
+    for units in head["fc_units"]:
+        layers.append(nn.Linear(in_features, units))
+        layers.append(get_activation(activation))
+        layers.append(nn.Dropout(head["dropout"]))
+        in_features = units
+    if not head["fc_units"]:
+        layers.append(nn.Dropout(head["dropout"]))  # no hidden layer: Dropout before the final FC
+    layers.append(nn.Linear(in_features, num_classes))  # raw scores, no softmax
+
+    model = nn.Sequential(*layers)
+    model.num_classes = num_classes
+    return model
