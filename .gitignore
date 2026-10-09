@@ -83,3 +83,4 @@ report/*.log
 report/*.out
 report/*.synctex.gz
 MEMBER_3_GUIDE.md
+localDocs/
