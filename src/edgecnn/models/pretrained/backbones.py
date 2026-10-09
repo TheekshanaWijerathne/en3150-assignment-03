@@ -1,33 +1,18 @@
-"""Lightweight SOTA backbones, fine-tuned.        Assignment Section 5 [20]
-
-Owner: Member 4.   Trained in notebooks/05_pretrained_finetuning.ipynb.
-
-    +---------------------------------------------------------------------+
-    |  IN   num_classes, input_shape=(3,64,64), and as **overrides the     |
-    |       matching configs/stages/pretrained.yaml -> pretrained.backbones|
-    |       entry (torchvision_name, weights, finetune_strategy,           |
-    |       unfreeze_last_n, replace_classifier, dropout,                  |
-    |       backbone_lr_scale) plus input_resolution                       |
-    |  OUT  nn.Module, forward -> (B, num_classes) RAW LOGITS              |
-    |       plus param_groups() for discriminative learning rates          |
-    +---------------------------------------------------------------------+
-
-``build_model_from_config(cfg, num_classes)`` finds the right backbone entry
-and passes it in - never assemble the overrides by hand.
-
-Both models register into the SAME registry as Model A and Model B. Member 3's
-trainer and Member 1's benchmark code therefore need no special case for them,
-which is precisely what makes the Section 6 comparison fair: the only thing
-that differs between a Model B row and a MobileNetV2 row in the final table is
-the architecture.
-
-Backbones are chosen from the list the assignment itself names.
-"""
-
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from torchvision.models import (
+    MobileNet_V2_Weights,
+    SqueezeNet1_1_Weights,
+    mobilenet_v2,
+    squeezenet1_1,
+)
+
+from edgecnn.models.pretrained.finetune import (
+    apply_finetune_strategy,
+    replace_classifier,
+)
 from edgecnn.models.registry import register
 
 if TYPE_CHECKING:
@@ -40,31 +25,34 @@ def build_mobilenet_v2(
     input_shape: tuple[int, int, int] = (3, 64, 64),
     **overrides: object,
 ) -> nn.Module:
-    """MobileNetV2 with an ImageNet backbone and a replaced classifier.
+    settings = dict(overrides)
+    torchvision_name = str(settings.pop("torchvision_name", "mobilenet_v2"))
+    if torchvision_name != "mobilenet_v2":
+        raise ValueError(f"expected torchvision_name='mobilenet_v2', got {torchvision_name!r}")
 
-    Steps:
+    weights = _resolve_weights(
+        MobileNet_V2_Weights,
+        settings.pop("weights", "IMAGENET1K_V1"),
+    )
+    strategy = str(settings.pop("finetune_strategy", "last_n_blocks"))
+    unfreeze_last_n = int(settings.pop("unfreeze_last_n", 3))
+    should_replace = bool(settings.pop("replace_classifier", True))
+    dropout = float(settings.pop("dropout", 0.2))
+    input_resolution = int(settings.pop("input_resolution", input_shape[-1]))
 
-    1. ``torchvision.models.mobilenet_v2(weights="IMAGENET1K_V1")``
-    2. Freeze per ``finetune_strategy``: ``head_only``, ``last_n_blocks``
-       (default, ``unfreeze_last_n: 3``) or ``full``.
-    3. Replace ``model.classifier[1]`` - a ``Linear(1280, 1000)`` - with
-       ``Linear(1280, num_classes)``. Forgetting this gives a model that
-       trains without error and reports nonsense, because the loss is computed
-       over 1000 logits of which only 10 are ever correct.
-    4. Always leave BatchNorm running statistics trainable in unfrozen blocks;
-       EuroSAT's channel statistics are nothing like ImageNet's.
+    settings.pop("backbone_lr_scale", None)
 
-    The 64x64 input is a deliberate choice, not an oversight - see
-    ``configs/stages/pretrained.yaml``. MobileNetV2 has a total stride of 32,
-    so a 64x64 input reaches the classifier as a 2x2 spatial map where the
-    architecture expects 7x7. That is a genuine finding for Section 6: a model
-    designed around a resolution cannot be dropped to a quarter of it for free,
-    and it explains any accuracy gap better than "pretrained models are
-    better/worse" would.
+    if settings:
+        raise TypeError("unsupported MobileNetV2 settings: " + ", ".join(sorted(settings)))
+    if not should_replace:
+        raise ValueError("the classifier must be replaced for EuroSAT")
 
-    The optimizer splits its parameters with :func:`param_groups` below.
-    """
-    raise NotImplementedError("Member 4: implement MobileNetV2 fine-tuning")
+    _check_resolution(input_shape, input_resolution)
+
+    model = mobilenet_v2(weights=weights)
+    replace_classifier(model, num_classes, dropout)
+    apply_finetune_strategy(model, strategy, unfreeze_last_n)
+    return model
 
 
 @register("squeezenet1_1")
@@ -73,23 +61,34 @@ def build_squeezenet(
     input_shape: tuple[int, int, int] = (3, 64, 64),
     **overrides: object,
 ) -> nn.Module:
-    """SqueezeNet 1.1 with an ImageNet backbone and a replaced classifier.
+    settings = dict(overrides)
+    torchvision_name = str(settings.pop("torchvision_name", "squeezenet1_1"))
+    if torchvision_name != "squeezenet1_1":
+        raise ValueError(f"expected torchvision_name='squeezenet1_1', got {torchvision_name!r}")
 
-    Note the structural difference from MobileNetV2, because contrasting the
-    two *mechanisms* is what Section 6 rewards - not just their accuracies.
-    SqueezeNet reaches parameter efficiency with fire modules: a 1x1 "squeeze"
-    that cuts channel count, then a mixed 1x1 / 3x3 "expand". MobileNetV2 uses
-    depthwise separables with inverted residuals. Both cut parameters; they
-    trade off differently against MACs and against activation memory, which is
-    often the real constraint on an MCU.
+    weights = _resolve_weights(
+        SqueezeNet1_1_Weights,
+        settings.pop("weights", "IMAGENET1K_V1"),
+    )
+    strategy = str(settings.pop("finetune_strategy", "last_n_blocks"))
+    unfreeze_last_n = int(settings.pop("unfreeze_last_n", 2))
+    should_replace = bool(settings.pop("replace_classifier", True))
+    dropout = float(settings.pop("dropout", 0.5))
+    input_resolution = int(settings.pop("input_resolution", input_shape[-1]))
 
-    SqueezeNet's classifier is a ``Conv2d(512, 1000, 1)`` followed by global
-    average pooling - not a Linear layer. Replace ``model.classifier[1]`` with
-    ``Conv2d(512, num_classes, kernel_size=1)`` and set
-    ``model.num_classes = num_classes``. A ``Linear`` substituted here will
-    fail on shape, so this one fails loudly rather than silently.
-    """
-    raise NotImplementedError("Member 4: implement SqueezeNet fine-tuning")
+    settings.pop("backbone_lr_scale", None)
+
+    if settings:
+        raise TypeError("unsupported SqueezeNet settings: " + ", ".join(sorted(settings)))
+    if not should_replace:
+        raise ValueError("the classifier must be replaced for EuroSAT")
+
+    _check_resolution(input_shape, input_resolution)
+
+    model = squeezenet1_1(weights=weights)
+    replace_classifier(model, num_classes, dropout)
+    apply_finetune_strategy(model, strategy, unfreeze_last_n)
+    return model
 
 
 def param_groups(
@@ -97,27 +96,73 @@ def param_groups(
     base_lr: float,
     backbone_lr_scale: float,
 ) -> list[dict[str, object]]:
-    """Split parameters into backbone and head groups for the optimizer.
+    """Return separate trainable backbone and classifier groups."""
+    if base_lr <= 0:
+        raise ValueError("base_lr must be positive")
+    if not 0 < backbone_lr_scale <= 1:
+        raise ValueError("backbone_lr_scale must be in the range (0, 1]")
+    if not hasattr(model, "classifier"):
+        raise TypeError("pretrained model must expose .classifier")
 
-    ``base_lr`` is the experiment's ``optimizer.lr`` and applies to the head;
-    the backbone gets ``base_lr * backbone_lr_scale``. Deriving one from the
-    other keeps the learning rate in one place - the experiment file.
+    head_parameters = [
+        parameter for parameter in model.classifier.parameters() if parameter.requires_grad
+    ]
+    head_ids = {id(parameter) for parameter in head_parameters}
 
-    Returns something like::
+    backbone_parameters = [
+        parameter
+        for parameter in model.parameters()
+        if parameter.requires_grad and id(parameter) not in head_ids
+    ]
 
-        [{"params": [...], "lr": base_lr * backbone_lr_scale, "name": "backbone"},
-         {"params": [...], "lr": base_lr,                     "name": "head"}]
+    groups: list[dict[str, object]] = []
+    if backbone_parameters:
+        groups.append(
+            {
+                "params": backbone_parameters,
+                "lr": base_lr * backbone_lr_scale,
+                "name": "backbone",
+            }
+        )
+    if head_parameters:
+        groups.append(
+            {
+                "params": head_parameters,
+                "lr": base_lr,
+                "name": "head",
+            }
+        )
 
-    Member 3's optimizer factory consumes this when present and falls back to
-    a single group otherwise, so custom models need no equivalent.
+    if not groups:
+        raise ValueError("model has no trainable parameters")
 
-    The reason for two rates: the backbone already encodes useful features, and
-    a head-sized learning rate applied to it destroys them in the first few
-    hundred steps - the classic fine-tuning failure where validation accuracy
-    peaks at epoch 1 and then falls. The freshly initialised head, by contrast,
-    is random and needs a full-sized rate. Worth stating in Section 5.
+    expected_ids = {id(parameter) for parameter in model.parameters() if parameter.requires_grad}
+    grouped_ids = {id(parameter) for group in groups for parameter in group["params"]}
+    if grouped_ids != expected_ids:
+        raise RuntimeError("parameter groups must contain every trainable parameter exactly once")
 
-    Exclude frozen parameters (``requires_grad=False``); passing them to an
-    optimizer wastes memory on unused state tensors.
-    """
-    raise NotImplementedError("Member 4: implement param_groups")
+    return groups
+
+
+def _resolve_weights(enum_type: Any, value: object) -> object:
+    if value is None:
+        return None
+    if isinstance(value, str) and value.lower() in {"none", "null"}:
+        return None
+    if not isinstance(value, str):
+        return value
+    try:
+        return enum_type[value]
+    except KeyError as exc:
+        valid = [item.name for item in enum_type]
+        raise ValueError(f"unknown weights {value!r}; expected one of {valid}") from exc
+
+
+def _check_resolution(
+    input_shape: tuple[int, int, int],
+    input_resolution: int,
+) -> None:
+    if len(input_shape) != 3 or input_shape[0] != 3:
+        raise ValueError("pretrained models require RGB (3, H, W) input")
+    if input_shape[1:] != (input_resolution, input_resolution):
+        raise ValueError("input_shape and pretrained.input_resolution do not match")
