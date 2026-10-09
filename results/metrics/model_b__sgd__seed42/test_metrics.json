@@ -1,0 +1,210 @@
+{
+  "run_id": "model_b__sgd__seed42",
+  "model": "model_b",
+  "split": "test",
+  "accuracy": 0.8987654320987655,
+  "macro_precision": 0.8943743418954051,
+  "macro_recall": 0.8955333333333334,
+  "macro_f1": 0.8937514281657324,
+  "weighted_precision": 0.898095067822083,
+  "weighted_recall": 0.8987654320987655,
+  "per_class": {
+    "AnnualCrop": {
+      "precision": 0.891832229580574,
+      "recall": 0.8977777777777778,
+      "f1": 0.8947951273532669,
+      "support": 450
+    },
+    "Forest": {
+      "precision": 0.9717391304347827,
+      "recall": 0.9933333333333333,
+      "f1": 0.9824175824175824,
+      "support": 450
+    },
+    "HerbaceousVegetation": {
+      "precision": 0.8584070796460177,
+      "recall": 0.8622222222222222,
+      "f1": 0.8603104212860311,
+      "support": 450
+    },
+    "Highway": {
+      "precision": 0.8598130841121495,
+      "recall": 0.736,
+      "f1": 0.7931034482758621,
+      "support": 375
+    },
+    "Industrial": {
+      "precision": 0.9222797927461139,
+      "recall": 0.9493333333333334,
+      "f1": 0.9356110381077529,
+      "support": 375
+    },
+    "Pasture": {
+      "precision": 0.8516320474777448,
+      "recall": 0.9566666666666667,
+      "f1": 0.9010989010989011,
+      "support": 300
+    },
+    "PermanentCrop": {
+      "precision": 0.8125,
+      "recall": 0.832,
+      "f1": 0.8221343873517787,
+      "support": 375
+    },
+    "Residential": {
+      "precision": 0.9347368421052632,
+      "recall": 0.9866666666666667,
+      "f1": 0.96,
+      "support": 450
+    },
+    "River": {
+      "precision": 0.8674698795180723,
+      "recall": 0.768,
+      "f1": 0.8147100424328148,
+      "support": 375
+    },
+    "SeaLake": {
+      "precision": 0.9733333333333334,
+      "recall": 0.9733333333333334,
+      "f1": 0.9733333333333334,
+      "support": 450
+    }
+  },
+  "confusion_matrix": [
+    [
+      404,
+      0,
+      5,
+      1,
+      0,
+      12,
+      12,
+      0,
+      6,
+      10
+    ],
+    [
+      0,
+      447,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      5,
+      2,
+      388,
+      4,
+      3,
+      3,
+      26,
+      15,
+      2,
+      2
+    ],
+    [
+      5,
+      1,
+      17,
+      276,
+      15,
+      8,
+      26,
+      6,
+      21,
+      0
+    ],
+    [
+      0,
+      0,
+      2,
+      7,
+      356,
+      0,
+      0,
+      10,
+      0,
+      0
+    ],
+    [
+      4,
+      1,
+      4,
+      1,
+      0,
+      287,
+      3,
+      0,
+      0,
+      0
+    ],
+    [
+      11,
+      1,
+      24,
+      6,
+      5,
+      9,
+      312,
+      0,
+      7,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      4,
+      0,
+      0,
+      444,
+      1,
+      0
+    ],
+    [
+      21,
+      8,
+      7,
+      26,
+      3,
+      17,
+      5,
+      0,
+      288,
+      0
+    ],
+    [
+      3,
+      0,
+      2,
+      0,
+      0,
+      1,
+      0,
+      0,
+      6,
+      438
+    ]
+  ],
+  "class_names": [
+    "AnnualCrop",
+    "Forest",
+    "HerbaceousVegetation",
+    "Highway",
+    "Industrial",
+    "Pasture",
+    "PermanentCrop",
+    "Residential",
+    "River",
+    "SeaLake"
+  ],
+  "num_samples": 4050,
+  "evaluated_utc": "2026-10-09T19:07:56+00:00",
+  "checkpoint": "artifacts/checkpoints/model_b__sgd__seed42/best.pt"
+}
