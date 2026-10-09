@@ -58,20 +58,26 @@ because every column still looks plausible. One code path removes that risk.
   counts; normalised at plot time only, by **true class**, so the diagonal reads as per-class recall.
 - **Macro averaging.** For single-label classification, micro-precision equals accuracy, so a micro
   column would silently repeat the accuracy column.
-- **Latency on CPU, batch size 1, for every model** — the §6 argument is about edge devices.
-- **Units.** `model_size_kb` is always KB; convert to MB only for the §5 table.
+- **Latency on CPU, one thread, batch size 1, for every model** — the §6 argument is about edge
+  devices. The mean of 100 timed passes after 10 untimed ones; the median is recorded too.
+- **Peak memory** = the weights plus the largest set of intermediate results alive at once, worked
+  out from the model's graph (`torch.fx`): each result is freed after its last use, and views and
+  in-place results are counted once. Machine-independent.
+- **Units.** `model_size_kb` is always KB; convert to MB only for the §5 table. 1 KB = 1,024 bytes
+  and 1 MB = 1,048,576 bytes, as in torchvision's published file sizes.
 - **Figure resolution.** Inline figures at `INLINE_DPI` keep committed notebooks small; saved PNGs
   use `FIGURE_DPI`, for print.
 
 ## Traps
 
-- `thop.profile` attaches `total_ops` buffers to the model. Profile a `deepcopy`, or the extra buffers
-  inflate `model_size_kb`.
-- Measure `model_size_kb` by serialising the `state_dict`, not as `numel * 4`. The computed figure
-  misses buffers such as BatchNorm running statistics, which take real bytes on the device.
+- `count_macs` counts **convolution and fully-connected** multiply-accumulates only, the convention
+  of the MobileNet and SqueezeNet papers; it reproduces torchvision's published figures exactly.
+  Many papers report FLOPs instead, roughly `2 × MACs`. Say which you used.
+- Measure `model_size_kb` by serialising the `state_dict`, not as `numel * 4` and not from the
+  checkpoint file. The computed figure misses buffers such as BatchNorm running statistics, which
+  take real bytes on the device; a checkpoint also holds optimizer state, several times the weights.
 - Pass `labels=range(len(class_names))` to `sklearn.confusion_matrix`. Otherwise a class absent from
   the predictions disappears and the matrix stops being square.
-- thop reports **MACs**, while many papers report FLOPs, roughly `2 × MACs`. Say which you used.
 
 ## Sanity check worth asserting
 

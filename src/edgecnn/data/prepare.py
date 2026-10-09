@@ -34,7 +34,7 @@ from typing import TYPE_CHECKING, Any
 from edgecnn.contracts import paths, schema
 from edgecnn.contracts.schema import MANIFEST_COLUMNS, ContractViolation
 from edgecnn.contracts.types import SPLIT_NAMES
-from edgecnn.utils.io import sha256_file
+from edgecnn.utils.io import repo_relative, sha256_file
 from edgecnn.utils.logging import get_logger, progress
 
 if TYPE_CHECKING:
@@ -222,7 +222,7 @@ def _prepare(
             write_norm_stats(paths.NORM_STATS, stats["mean"], stats["std"], stats["num_images"]),
             write_split_meta(paths.SPLIT_META, paths.SPLIT_MANIFEST, **fields),
         ]
-        log.info("Wrote the split: %s", ", ".join(_shown(path) for path in written))
+        log.info("Wrote the split: %s", ", ".join(repo_relative(path) for path in written))
     return _Prepared(rows, meta, stats, written, image_dir)
 
 
@@ -275,7 +275,7 @@ def _collect(cfg: ResolvedConfig, image_dir: Path) -> tuple[list[str], list[dict
         if expected is not None and int(expected) != found:
             raise ValueError(
                 f"found {found} but dataset.{key} is {expected}: the download is incomplete or a "
-                f"different version. Delete {_shown(_raw_root(cfg))} and run again."
+                f"different version. Delete {repo_relative(_raw_root(cfg))} and run again."
             )
     resize_mode = _resize_mode(cfg)
     jobs = [(source, _processed_path(source, name, resize_mode)) for source, name in sources]
@@ -307,8 +307,8 @@ def _raw_images(cfg: ResolvedConfig) -> tuple[list[str], list[tuple[Path, str]]]
     except Exception as exc:  # no network, a corrupt archive, or not downloaded yet
         reason = "the download failed" if download else "it is missing and dataset.download is off"
         raise FileNotFoundError(
-            f"could not load {name} from {_shown(root)}: {reason} ({exc}). To add it by "
-            f"hand, unzip EuroSAT.zip so that {_shown(root / 'eurosat' / '2750')} holds one "
+            f"could not load {name} from {repo_relative(root)}: {reason} ({exc}). To add it by "
+            f"hand, unzip EuroSAT.zip so that {repo_relative(root / 'eurosat' / '2750')} holds one "
             "folder per class."
         ) from exc
     classes = list(raw.classes)
@@ -379,8 +379,8 @@ def _check_manifest_hash(manifest: Path, meta: dict[str, Any]) -> None:
     """Raise unless ``manifest`` is the file whose SHA-256 ``split_meta.json`` recorded."""
     if sha256_file(manifest) != meta["manifest_sha256"]:
         raise ContractViolation(
-            f"{_shown(manifest)} no longer matches the SHA-256 recorded in split_meta.json: it was "
-            "edited or regenerated after the split was committed (or its line endings were "
+            f"{repo_relative(manifest)} no longer matches the SHA-256 recorded in split_meta.json: "
+            "it was edited or regenerated after the split was committed (or its line endings were "
             "converted), so results drawn from the committed split may not match it. Restore it "
             "with `git checkout -- data/splits/`."
         )
@@ -409,14 +409,6 @@ def _source_note(dataset: dict[str, Any]) -> str:
     note = f"torchvision.datasets.{dataset.get('torchvision_class', 'EuroSAT')}"
     citation = dataset.get("citation")
     return f"{note}; {citation}" if citation else note
-
-
-def _shown(path: Path) -> str:
-    """``path`` relative to the repository when inside it - never a personal absolute path."""
-    try:
-        return Path(path).resolve().relative_to(paths.REPO_ROOT).as_posix()
-    except ValueError:
-        return Path(path).as_posix()
 
 
 # --- shared helpers (also used by the synthetic fixture) ----------------------

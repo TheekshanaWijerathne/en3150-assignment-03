@@ -82,5 +82,7 @@ report/*.aux
 report/*.log
 report/*.out
 report/*.synctex.gz
-MEMBER_3_GUIDE.md
 localDocs/
+
+# --- Local workflow notes ---------------------------------------------------
+/MEMBER_4_WORKFLOW.md

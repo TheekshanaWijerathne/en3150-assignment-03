@@ -17,6 +17,7 @@ from __future__ import annotations
 import contextlib
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -127,3 +128,53 @@ def valid_resources() -> dict:
         "peak_mem_mb": 18.4,
         "device": "cpu (test)",
     }
+
+
+@pytest.fixture
+def fake_eurosat(tmp_path, monkeypatch) -> SimpleNamespace:
+    """A 3-class, 60-image EuroSAT laid out as torchvision leaves a download.
+
+    Every data output - processed images, the split files, the dataset figures -
+    is redirected to ``tmp_path``. ``fake_eurosat.config(mode, **overrides)``
+    loads ``model_b__adam`` pointed at it; ``.classes`` and ``.per_class``
+    describe it. Needs no network.
+    """
+    import numpy as np
+    from PIL import Image
+
+    from edgecnn.config.loader import load_config
+
+    classes, per_class = ("Forest", "River", "SeaLake"), 20
+    rng = np.random.RandomState(0)
+    raw = tmp_path / "raw"
+    for name in classes:
+        folder = raw / "eurosat" / "2750" / name
+        folder.mkdir(parents=True)
+        for index in range(1, per_class + 1):
+            pixels = rng.randint(0, 256, size=(64, 64, 3), dtype=np.uint8)
+            Image.fromarray(pixels).save(folder / f"{name}_{index}.jpg", quality=95)
+
+    splits = tmp_path / "splits"
+    monkeypatch.setattr(paths, "PROCESSED_DIR", tmp_path / "processed")
+    monkeypatch.setattr(paths, "SPLIT_MANIFEST", splits / "split_manifest.csv")
+    monkeypatch.setattr(paths, "SPLIT_META", splits / "split_meta.json")
+    monkeypatch.setattr(paths, "NORM_STATS", splits / "norm_stats.json")
+    monkeypatch.setattr(paths, "DATASET_FIGURES_DIR", tmp_path / "figures")
+    overrides = {
+        "dataset.root": str(raw),
+        "dataset.download": False,
+        "dataset.expected_num_classes": len(classes),
+        "dataset.expected_num_images": len(classes) * per_class,
+    }
+    experiment = paths.CONFIGS_DIR / "experiments" / "model_b__adam.yaml"
+
+    def config(mode: str = "debug", **extra):
+        return load_config(experiment, mode=mode, **{**overrides, **extra})
+
+    return SimpleNamespace(
+        config=config,
+        root=tmp_path,
+        classes=classes,
+        per_class=per_class,
+        images=tmp_path / "processed" / "eurosat_64",
+    )

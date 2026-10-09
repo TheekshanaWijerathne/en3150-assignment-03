@@ -99,6 +99,7 @@ def plot_loss_curves(source: HistorySource, write: bool = False) -> Figure:
         destination = paths.curves_png(run_id)
         destination.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(destination, dpi=200, bbox_inches="tight")
+    plt.close(fig)  # the returned figure still displays - once; left open, pyplot shows it twice
     return fig
 
 
@@ -185,6 +186,7 @@ def plot_optimizer_overlay(sources: list[HistorySource], write: bool = False) ->
     if write:
         paths.OPTIMIZER_OVERLAY_PNG.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(paths.OPTIMIZER_OVERLAY_PNG, dpi=200, bbox_inches="tight")
+    plt.close(fig)  # the returned figure still displays - once; left open, pyplot shows it twice
     return fig
 
 

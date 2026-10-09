@@ -4,7 +4,6 @@ loaders, and EuroSAT preparation (on a small fake download) with its Section 1 f
 from __future__ import annotations
 
 import shutil
-from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -304,50 +303,12 @@ def test_real_data_without_a_committed_split_says_what_to_do(monkeypatch, tmp_pa
         build_dataloaders(load_config(_experiment("model_b__adam"), mode="debug"))
 
 
-# --- EuroSAT preparation, on a small fake download (no network) -------------------
-
-FAKE_CLASSES = ("Forest", "River", "SeaLake")
-FAKE_PER_CLASS = 20
-
-
-@pytest.fixture
-def fake_eurosat(tmp_path, monkeypatch):
-    """A 3-class, 60-image EuroSAT laid out as torchvision leaves it; every output goes to tmp."""
-    from PIL import Image
-
-    rng = np.random.RandomState(0)
-    raw = tmp_path / "raw"
-    for name in FAKE_CLASSES:
-        folder = raw / "eurosat" / "2750" / name
-        folder.mkdir(parents=True)
-        for index in range(1, FAKE_PER_CLASS + 1):
-            pixels = rng.randint(0, 256, size=(64, 64, 3), dtype=np.uint8)
-            Image.fromarray(pixels).save(folder / f"{name}_{index}.jpg", quality=95)
-
-    splits = tmp_path / "splits"
-    monkeypatch.setattr(paths, "PROCESSED_DIR", tmp_path / "processed")
-    monkeypatch.setattr(paths, "SPLIT_MANIFEST", splits / "split_manifest.csv")
-    monkeypatch.setattr(paths, "SPLIT_META", splits / "split_meta.json")
-    monkeypatch.setattr(paths, "NORM_STATS", splits / "norm_stats.json")
-    monkeypatch.setattr(paths, "DATASET_FIGURES_DIR", tmp_path / "figures")
-    overrides = {
-        "dataset.root": str(raw),
-        "dataset.download": False,
-        "dataset.expected_num_classes": len(FAKE_CLASSES),
-        "dataset.expected_num_images": len(FAKE_CLASSES) * FAKE_PER_CLASS,
-    }
-
-    def config(mode: str = "debug", **extra):
-        return load_config(_experiment("model_b__adam"), mode=mode, **{**overrides, **extra})
-
-    images = tmp_path / "processed" / "eurosat_64"
-    return SimpleNamespace(config=config, root=tmp_path, images=images)
-
+# --- EuroSAT preparation, on a small fake download (fake_eurosat: tests/conftest.py) ---
 
 def test_debug_run_draws_the_split_but_writes_nothing(fake_eurosat) -> None:
     prepared = prepare_dataset(fake_eurosat.config("debug"))
     assert prepared["written"] == [] and not paths.SPLIT_MANIFEST.exists()
-    assert prepared["meta"]["class_names"] == list(FAKE_CLASSES)
+    assert prepared["meta"]["class_names"] == list(fake_eurosat.classes)
     assert prepared["meta"]["counts"] == {"train": 42, "val": 9, "test": 9, "total": 60}
     assert prepared["norm_stats"]["fitted_on"] == "train"
     assert prepared["norm_stats"]["num_images"] == 42
@@ -416,7 +377,7 @@ def test_a_fresh_clone_loads_the_committed_split(fake_eurosat) -> None:
     prepare_dataset(fake_eurosat.config("official"))
     shutil.rmtree(paths.PROCESSED_DIR)  # images and pixel cache gone, as on a new machine
     data = build_dataloaders(fake_eurosat.config("debug"))
-    assert data.class_names == list(FAKE_CLASSES)
+    assert data.class_names == list(fake_eurosat.classes)
     assert (len(data.val.dataset), len(data.test.dataset)) == (9, 9)
     images, labels = next(iter(data.test))
     assert images.dtype == torch.float32 and images.shape[1:] == INPUT_SHAPE
@@ -435,7 +396,7 @@ def test_split_table_and_figures(fake_eurosat) -> None:
     cfg = fake_eurosat.config("debug")
     grids = [plot_sample_grid(cfg, per_class=2, write=True) for _ in range(2)]
     shown = [[ax.images[0].get_array() for ax in grid.axes if ax.images] for grid in grids]
-    assert len(shown[0]) == len(FAKE_CLASSES) * 2
+    assert len(shown[0]) == len(fake_eurosat.classes) * 2
     assert all(np.array_equal(a, b) for a, b in zip(*shown, strict=True))  # same picks every time
     assert (paths.DATASET_FIGURES_DIR / "sample_grid.png").exists()
 

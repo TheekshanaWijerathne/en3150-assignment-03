@@ -26,7 +26,6 @@ dependencies = [
     "jsonschema>=4.20",       # enforces the seam contracts in configs/contracts/
     "scikit-learn>=1.3",      # precision / recall / confusion matrix (Section 4)
     "matplotlib>=3.7",        # loss curves + confusion matrix figures
-    "thop>=0.1.1",            # MAC counting for the Section 2 / 6 cost comparison
     "tqdm>=4.66",
 ]
 

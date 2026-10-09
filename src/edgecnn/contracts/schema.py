@@ -117,7 +117,8 @@ def write_json(path: Path, payload: Any, schema_name: str) -> Path:
     """Validate, then write pretty-printed JSON. Creates parent directories."""
     validate(payload, schema_name, source=path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    text = json.dumps(payload, indent=2, sort_keys=False) + "\n"
+    path.write_text(text, encoding="utf-8", newline="\n")  # the same bytes on every OS
     return path
 
 

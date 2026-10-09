@@ -36,10 +36,14 @@ model_a:
 # build if it is exceeded - do not rely on reading a printout.
 model_b:
   stem: {out_channels: 16, kernel_size: 3, stride: 1, padding: 1}
+  # Width is added in the later blocks, which work on small 16x16 and 8x8 maps:
+  # a channel there costs the same parameters as early on, but far fewer MACs.
+  # 71,818 trainable parameters (72% of the cap), 13.0 M MACs per 64x64 image.
   blocks:
     - {out_channels: 32, stride: 1, pool: 2}
     - {out_channels: 64, stride: 1, pool: 2}
-    - {out_channels: 96, stride: 1, pool: 2}
+    - {out_channels: 160, stride: 1, pool: 2}
+    - {out_channels: 320, stride: 1}           # 8x8 maps; no pooling before the global average
   head:
     global_pool: true          # GAP instead of flatten - this is where most of
                                # the parameter saving comes from, not the convs

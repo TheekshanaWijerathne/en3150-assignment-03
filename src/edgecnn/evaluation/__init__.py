@@ -17,6 +17,7 @@ from edgecnn.evaluation.benchmark import (
     count_macs,
     measure_latency,
     measure_model_size_kb,
+    measure_peak_memory_mb,
     profile_all,
     profile_model,
 )
@@ -28,6 +29,7 @@ __all__ = [
     "evaluate_run",
     "measure_latency",
     "measure_model_size_kb",
+    "measure_peak_memory_mb",
     "predict",
     "profile_all",
     "profile_model",

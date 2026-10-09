@@ -27,12 +27,12 @@ benchmark:
   # Latency is measured on CPU for EVERY model, even on a CUDA machine. The
   # Section 6 argument is about edge deployment, and edge devices have no GPU.
   # Notebook 06 profiles all four architectures in ONE session on ONE machine.
-  latency_device: cpu
+  latency_device: cpu          # on one thread - see LATENCY_THREADS in benchmark.py
   latency_batch_size: 1        # the batch size an edge device actually uses
   latency_warmup: 10
   latency_repeats: 100
-  count_macs: true             # via thop
-  measure_peak_memory: true
+  count_macs: true             # conv + fully-connected multiply-accumulates (paper convention)
+  measure_peak_memory: true    # weights + largest set of live intermediate results, from the graph
   model_size_from: state_dict
 
 reporting:

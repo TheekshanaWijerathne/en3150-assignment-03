@@ -154,8 +154,8 @@ remains.
 - **Rewrite the stub's docstring for a reader.** The stubs' current docstrings are notes for us
   ("Implementation notes for …", who calls it, traps to avoid). When you implement a function, replace
   that with a summary, its `Args` / `Returns` / `Raises`, and the reasoning a reader needs. Keep the
-  technical *why* — for example "profile a deep copy, because thop attaches buffers" — and drop the
-  *who*.
+  technical *why* — for example "measure a copy, so the caller's model keeps its train / eval
+  mode" — and drop the *who*.
 - **Team-only text you want to keep in the repository** goes at the **end** of the docstring, after a
   line that says exactly `Team notes:`. The build deletes everything from that line to the end of the
   docstring.

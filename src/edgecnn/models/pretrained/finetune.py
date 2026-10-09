@@ -9,10 +9,9 @@ Section 5 table reports.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from torch import nn
+from torch import nn
+from torchvision.models.mobilenetv2 import MobileNetV2
+from torchvision.models.squeezenet import SqueezeNet
 
 #: Strategies selectable from configs/stages/pretrained.yaml.
 FINETUNE_STRATEGIES: tuple[str, ...] = ("head_only", "last_n_blocks", "full")
@@ -68,4 +67,13 @@ def count_trainable_vs_total(model: nn.Module) -> tuple[int, int]:
     report come from Member 1's ``profile_model`` so every model is counted by
     one code path.
     """
-    raise NotImplementedError("Member 4: implement count_trainable_vs_total")
+    total = sum(parameter.numel() for parameter in model.parameters())
+
+    trainable = sum(
+        parameter.numel()
+        for parameter in model.parameters()
+        if parameter.requires_grad
+    )
+
+    return trainable, total
+

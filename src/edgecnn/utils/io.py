@@ -35,6 +35,20 @@ def ensure_dir(path: Path) -> Path:
     return path
 
 
+def repo_relative(path: Path) -> str:
+    """``path`` relative to the repository, with forward slashes, when it is inside it.
+
+    For messages and recorded paths: notebook outputs and result files are
+    committed, so they must never contain a personal absolute path.
+    """
+    from edgecnn.contracts.paths import REPO_ROOT
+
+    try:
+        return Path(path).resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return Path(path).as_posix()
+
+
 def format_cell(value: Any) -> str:
     """Format one table cell: thousands separators for integers, 4 significant
     digits for small floats, one decimal for large ones, ``—`` for missing values."""
