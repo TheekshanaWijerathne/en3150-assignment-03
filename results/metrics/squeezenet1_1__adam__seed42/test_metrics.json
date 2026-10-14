@@ -205,6 +205,6 @@
     "SeaLake"
   ],
   "num_samples": 4050,
-  "evaluated_utc": "2026-10-14T18:30:35+00:00",
+  "evaluated_utc": "2026-10-14T20:39:41+00:00",
   "checkpoint": "artifacts/checkpoints/squeezenet1_1__adam__seed42/best.pt"
 }

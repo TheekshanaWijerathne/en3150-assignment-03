@@ -205,6 +205,6 @@
     "SeaLake"
   ],
   "num_samples": 4050,
-  "evaluated_utc": "2026-10-14T18:26:30+00:00",
+  "evaluated_utc": "2026-10-14T20:35:21+00:00",
   "checkpoint": "artifacts/checkpoints/mobilenet_v2__adam__seed42/best.pt"
 }
