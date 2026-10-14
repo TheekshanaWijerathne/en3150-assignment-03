@@ -49,13 +49,19 @@ def repo_relative(path: Path) -> str:
         return Path(path).as_posix()
 
 
-def format_cell(value: Any) -> str:
+def format_cell(value: Any, spec: str | None = None) -> str:
     """Format one table cell: thousands separators for integers, 4 significant
-    digits for small floats, one decimal for large ones, ``—`` for missing values."""
+    digits for small floats, one decimal for large ones, ``—`` for missing values.
+
+    ``spec``, a format spec such as ``".2f"``, overrides this for numbers, so a
+    column can keep a fixed number of decimals.
+    """
     if value is None:
         return "—"
     if isinstance(value, bool):
         return str(value)
+    if spec is not None and isinstance(value, Real):
+        return format(value, spec)
     if isinstance(value, Integral):
         return f"{int(value):,}"
     if isinstance(value, Real):
@@ -64,7 +70,12 @@ def format_cell(value: Any) -> str:
     return str(value).replace("|", "\\|").replace("\n", " ")
 
 
-def markdown_table(headers: list[str], rows: list[list[Any]], caption: str | None = None) -> str:
+def markdown_table(
+    headers: list[str],
+    rows: list[list[Any]],
+    caption: str | None = None,
+    formats: list[str | None] | None = None,
+) -> str:
     """A GitHub-flavoured Markdown table as a string.
 
     Columns whose values are all numbers are right-aligned, so digits line up.
@@ -73,15 +84,22 @@ def markdown_table(headers: list[str], rows: list[list[Any]], caption: str | Non
         headers: Column names.
         rows: One list of cell values per row, in header order.
         caption: Optional line printed in italics above the table.
+        formats: Optional format spec per column, such as ``".2f"`` for two
+            decimals in every row; ``None`` keeps the default for that column.
 
     Raises:
-        ValueError: if a row's length differs from the number of headers.
+        ValueError: if a row's length, or the number of formats, differs from
+            the number of headers.
     """
     for index, row in enumerate(rows):
         if len(row) != len(headers):
             raise ValueError(
                 f"row {index} has {len(row)} cells but there are {len(headers)} headers"
             )
+    if formats is None:
+        formats = [None] * len(headers)
+    elif len(formats) != len(headers):
+        raise ValueError(f"{len(formats)} formats for {len(headers)} headers")
 
     def numeric(column: int) -> bool:
         cells = [row[column] for row in rows if row[column] is not None]
@@ -95,7 +113,8 @@ def markdown_table(headers: list[str], rows: list[list[Any]], caption: str | Non
     lines.append("| " + " | ".join(format_cell(h) for h in headers) + " |")
     lines.append("|" + "|".join("---:" if numeric(c) else "---" for c in range(len(headers))) + "|")
     for row in rows:
-        lines.append("| " + " | ".join(format_cell(cell) for cell in row) + " |")
+        cells = (format_cell(cell, spec) for cell, spec in zip(row, formats, strict=True))
+        lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines) + "\n"
 
 
@@ -104,6 +123,7 @@ def write_markdown_table(
     headers: list[str],
     rows: list[list[Any]],
     caption: str | None = None,
+    formats: list[str | None] | None = None,
 ) -> Path:
     """Write :func:`markdown_table` to ``path``, creating parent directories.
 
@@ -112,5 +132,5 @@ def write_markdown_table(
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(markdown_table(headers, rows, caption), encoding="utf-8")
+    path.write_text(markdown_table(headers, rows, caption, formats), encoding="utf-8")
     return path

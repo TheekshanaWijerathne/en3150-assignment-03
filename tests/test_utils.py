@@ -104,6 +104,14 @@ def test_markdown_table_rejects_ragged_rows() -> None:
         markdown_table(["a", "b"], [[1]])
 
 
+def test_markdown_table_keeps_a_column_format_in_every_row() -> None:
+    text = markdown_table(["model", "accuracy"], [["A", 90.0], ["B", 96.1]], formats=[None, ".2f"])
+    assert "| A | 90.00 |" in text and "| B | 96.10 |" in text
+    assert "|---|---:|" in text  # still right-aligned
+    with pytest.raises(ValueError):
+        markdown_table(["a", "b"], [[1, 2]], formats=[None])
+
+
 def test_format_cell_handles_pipes_missing_values_and_large_floats() -> None:
     assert format_cell("a|b") == "a\\|b"
     assert format_cell(None) == "—"
@@ -131,6 +139,7 @@ from edgecnn.evaluation.plotting import (  # noqa: E402
     annotate_hardware,
     apply_style,
     color_for,
+    label_for,
     save_figure,
 )
 
@@ -150,6 +159,15 @@ def test_color_for_known_unknown_and_invalid_kinds() -> None:
     assert color_for("not_a_model") == NEUTRAL_GREY
     with pytest.raises(ValueError):
         color_for("model_b", kind="shape")
+
+
+def test_label_for_names_models_and_optimizers() -> None:
+    assert label_for("model_b") == "Model B"
+    assert label_for("squeezenet1_1") == "SqueezeNet 1.1"
+    assert label_for("sgd_momentum", kind="optimizer") == "SGD + momentum"
+    assert label_for("resnet18") == "resnet18"
+    with pytest.raises(ValueError):
+        label_for("train", kind="split")
 
 
 def test_save_figure_writes_and_copies(tmp_path) -> None:

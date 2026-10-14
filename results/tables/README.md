@@ -17,8 +17,8 @@ the notebook, so a debug pass previews them without writing anything.
 ## What each must contain
 
 **Section 4** asks for: total parameter count, estimated model size on disk (KB), training time per
-epoch, and test accuracy. Add MACs — that is the number that actually shows the saving from
-depthwise-separable convolutions.
+epoch, and test accuracy, precision and recall. Add MACs — that is the number that actually shows
+the saving from depthwise-separable convolutions.
 
 **Section 3** asks about both convergence *and* final performance, so report both: `best_val_acc` for
 performance, and the epochs each run needed to reach 90% of its own best validation accuracy for

@@ -1,0 +1,23 @@
+{
+  "run_id": "model_b__sgd_momentum__seed42",
+  "model": "model_b",
+  "trainable_params": 71818,
+  "total_params": 71818,
+  "model_size_kb": 303.9326171875,
+  "macs": 12989568,
+  "input_shape": [
+    3,
+    64,
+    64
+  ],
+  "mean_epoch_time_s": 11.046445143100009,
+  "inference_latency_ms": 3.465032000676729,
+  "latency_median_ms": 3.357449983013794,
+  "latency_batch_size": 1,
+  "latency_repeats": 100,
+  "latency_threads": 1,
+  "peak_mem_mb": 1.2806243896484375,
+  "peak_mem_method": "graph",
+  "device": "cpu (11th Gen Intel Core i5-11400H @ 2.70GHz)",
+  "measured_utc": "2026-10-14T21:11:02+00:00"
+}

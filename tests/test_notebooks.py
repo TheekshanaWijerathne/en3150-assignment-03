@@ -55,7 +55,10 @@ def test_every_section_notebook_exists() -> None:
 def test_notebook_is_valid_nbformat4(stem: str) -> None:
     notebook = _load(stem)
     assert notebook["nbformat"] == 4
-    assert notebook["metadata"]["kernelspec"]["language"] == "python"
+    metadata = notebook["metadata"]
+    # Colab saves leave out kernelspec.language (it is optional); language_info names it.
+    language = metadata["kernelspec"].get("language") or metadata["language_info"]["name"]
+    assert language == "python"
     ids = [cell.get("id") for cell in notebook["cells"]]
     assert all(ids) and len(ids) == len(set(ids)), f"{stem}: cell ids missing or duplicated"
 
@@ -139,8 +142,14 @@ def test_scratch_folder_exists() -> None:
 
 
 def test_no_notebook_embeds_an_absolute_user_path() -> None:
-    """Outputs are committed; C:\\Users\\<name>\\... paths leak and differ per machine."""
-    pattern = re.compile(r"[A-Za-z]:\\\\Users\\\\|/home/[a-z_][a-z0-9_-]*/|/Users/[A-Za-z]")
+    """Outputs are committed; C:\\Users\\<name>\\... paths leak and differ per machine.
+
+    Any drive-letter path counts, such as a ``WindowsPath('C:/...')`` shown as a cell's value.
+    """
+    pattern = re.compile(
+        r"[A-Za-z]:\\\\Users\\\\|/home/[a-z_][a-z0-9_-]*/|/Users/[A-Za-z]"
+        r"|(?<![A-Za-z])[A-Za-z]:(?:\\\\|/)(?!/)"
+    )
     for notebook in sorted(Path(paths.NOTEBOOKS_DIR).rglob("*.ipynb")):
         text = notebook.read_text(encoding="utf-8")
         assert not pattern.search(text), f"{notebook.name}: print repo-relative paths only"

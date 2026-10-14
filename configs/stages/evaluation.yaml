@@ -42,8 +42,9 @@ reporting:
   tables:
     - name: custom_model_comparison     # Section 4: Model A vs Model B
       runs: [model_a__adam__seed42, model_b__adam__seed42]
-      columns: [model, trainable_params, model_size_kb, macs,
-                mean_epoch_time_s, test_accuracy]
+      columns: [model, total_params, model_size_kb, macs,
+                mean_epoch_time_s, test_accuracy,
+                macro_precision, macro_recall]
     - name: optimizer_comparison        # Section 3: sgd vs sgd+momentum vs adam
       runs: [model_b__sgd__seed42, model_b__sgd_momentum__seed42,
              model_b__adam__seed42]
