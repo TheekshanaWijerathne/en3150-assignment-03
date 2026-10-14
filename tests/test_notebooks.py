@@ -55,7 +55,10 @@ def test_every_section_notebook_exists() -> None:
 def test_notebook_is_valid_nbformat4(stem: str) -> None:
     notebook = _load(stem)
     assert notebook["nbformat"] == 4
-    assert notebook["metadata"]["kernelspec"]["language"] == "python"
+    metadata = notebook["metadata"]
+    # Colab saves leave out kernelspec.language (it is optional); language_info names it.
+    language = metadata["kernelspec"].get("language") or metadata["language_info"]["name"]
+    assert language == "python"
     ids = [cell.get("id") for cell in notebook["cells"]]
     assert all(ids) and len(ids) == len(set(ids)), f"{stem}: cell ids missing or duplicated"
 
