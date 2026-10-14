@@ -139,8 +139,14 @@ def test_scratch_folder_exists() -> None:
 
 
 def test_no_notebook_embeds_an_absolute_user_path() -> None:
-    """Outputs are committed; C:\\Users\\<name>\\... paths leak and differ per machine."""
-    pattern = re.compile(r"[A-Za-z]:\\\\Users\\\\|/home/[a-z_][a-z0-9_-]*/|/Users/[A-Za-z]")
+    """Outputs are committed; C:\\Users\\<name>\\... paths leak and differ per machine.
+
+    Any drive-letter path counts, such as a ``WindowsPath('C:/...')`` shown as a cell's value.
+    """
+    pattern = re.compile(
+        r"[A-Za-z]:\\\\Users\\\\|/home/[a-z_][a-z0-9_-]*/|/Users/[A-Za-z]"
+        r"|(?<![A-Za-z])[A-Za-z]:(?:\\\\|/)(?!/)"
+    )
     for notebook in sorted(Path(paths.NOTEBOOKS_DIR).rglob("*.ipynb")):
         text = notebook.read_text(encoding="utf-8")
         assert not pattern.search(text), f"{notebook.name}: print repo-relative paths only"
