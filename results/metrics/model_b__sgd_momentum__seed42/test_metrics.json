@@ -205,6 +205,6 @@
     "SeaLake"
   ],
   "num_samples": 4050,
-  "evaluated_utc": "2026-10-14T17:35:18+00:00",
+  "evaluated_utc": "2026-10-14T20:10:41+00:00",
   "checkpoint": "artifacts/checkpoints/model_b__sgd_momentum__seed42/best.pt"
 }
