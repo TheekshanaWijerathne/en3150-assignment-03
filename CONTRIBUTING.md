@@ -121,10 +121,10 @@ Each function you own exists as a stub whose docstring states what it takes, wha
 writes, and the traps to avoid. **Keep the stub's signature.** Other members' notebooks are already
 calling it with those arguments.
 
-When you implement a stub, **rewrite its docstring for a reader**. The final submission notebook
-contains our code but none of our internal notes — no member details, no team process. Anything
-only the team needs goes under a `Team notes:` line or a `# team:` comment. The rules are in
-[SUBMISSION.md §6](SUBMISSION.md#6-how-internal-material-gets-removed).
+When you implement a stub, **rewrite its docstring for a reader**. The submitted code contains
+none of our internal notes — no member details, no team process. Anything only the team needs goes
+under a `Team notes:` line or a `# team:` comment. What the submission must never contain is in
+[SUBMISSION.md §4](SUBMISSION.md#4-what-must-never-appear-in-it).
 
 ### `MODE` — one switch in every notebook
 
