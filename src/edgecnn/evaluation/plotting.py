@@ -34,6 +34,19 @@ OPTIMIZER_COLORS: dict[str, str] = {
     "adam": "#DA8BC3",
 }
 
+#: How each model and optimizer is named in figures and tables.
+MODEL_LABELS: dict[str, str] = {
+    "model_a": "Model A",
+    "model_b": "Model B",
+    "mobilenet_v2": "MobileNetV2",
+    "squeezenet1_1": "SqueezeNet 1.1",
+}
+OPTIMIZER_LABELS: dict[str, str] = {
+    "sgd": "SGD",
+    "sgd_momentum": "SGD + momentum",
+    "adam": "Adam",
+}
+
 #: One colour per split, one hue from dark to light, so the three bars of a
 #: class read as one group in the dataset figures.
 SPLIT_COLORS: dict[str, str] = {
@@ -142,6 +155,20 @@ def color_for(key: str, kind: str = "model") -> str:
     if kind not in palettes:
         raise ValueError(f"kind must be one of {sorted(palettes)}, not {kind!r}")
     return palettes[kind].get(key, NEUTRAL_GREY)
+
+
+def label_for(key: str, kind: str = "model") -> str:
+    """The display name for a model or optimizer key, such as ``"Model B"`` for ``"model_b"``.
+
+    An unknown key is shown as it is.
+
+    Raises:
+        ValueError: if ``kind`` is not ``"model"`` or ``"optimizer"``.
+    """
+    labels = {"model": MODEL_LABELS, "optimizer": OPTIMIZER_LABELS}
+    if kind not in labels:
+        raise ValueError(f"kind must be one of {sorted(labels)}, not {kind!r}")
+    return labels[kind].get(key, key)
 
 
 def annotate_hardware(fig: Figure, device: str, **kwargs: Any) -> None:

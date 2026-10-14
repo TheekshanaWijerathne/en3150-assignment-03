@@ -13,6 +13,7 @@ from matplotlib.figure import Figure
 from edgecnn.contracts import paths, schema
 from edgecnn.evaluation.plotting import (
     color_for,
+    label_for,
     save_figure,
 )
 
@@ -81,10 +82,11 @@ def _save_table(
     destination: Path,
     write: bool,
     caption: str,
+    formats: list[str | None],
 ) -> str:
     from edgecnn.utils.io import markdown_table
 
-    text = markdown_table(headers, rows, caption)
+    text = markdown_table(headers, rows, caption, formats)
 
     if write:
         destination.parent.mkdir(
@@ -94,6 +96,7 @@ def _save_table(
         destination.write_text(
             text,
             encoding="utf-8",
+            newline="\n",
         )
 
     return text
@@ -184,12 +187,14 @@ def build_custom_comparison_table(
 
         rows.append(
             [
-                metrics["model"],
+                label_for(metrics["model"]),
                 resources["total_params"],
                 resources["model_size_kb"],
                 resources["macs"],
                 resources["mean_epoch_time_s"],
                 metrics["accuracy"] * 100,
+                metrics["macro_precision"] * 100,
+                metrics["macro_recall"] * 100,
             ]
         )
 
@@ -201,11 +206,14 @@ def build_custom_comparison_table(
             "MACs",
             "Mean epoch time (s)",
             "Test accuracy (%)",
+            "Macro precision (%)",
+            "Macro recall (%)",
         ],
         rows,
         paths.CUSTOM_COMPARISON_TABLE,
         write,
         "Model A and Model B comparison.",
+        [None, None, ",.1f", None, ".1f", ".2f", ".2f", ".2f"],
     )
 
 
@@ -239,7 +247,7 @@ def build_optimizer_comparison_table(
 
         rows.append(
             [
-                history["optimizer"],
+                label_for(history["optimizer"], "optimizer"),
                 learning_rate,
                 history["best_epoch"],
                 best_accuracy * 100,
@@ -263,6 +271,7 @@ def build_optimizer_comparison_table(
         paths.OPTIMIZER_COMPARISON_TABLE,
         write,
         "Model B optimizer comparison.",
+        [None, None, None, ".2f", ".2f", None, ".1f"],
     )
 
 
@@ -285,7 +294,7 @@ def build_final_comparison_table(
 
         rows.append(
             [
-                metrics["model"],
+                label_for(metrics["model"]),
                 resources["trainable_params"],
                 resources["total_params"],
                 size_kb,
@@ -317,6 +326,7 @@ def build_final_comparison_table(
         paths.FINAL_COMPARISON_TABLE,
         write,
         "Model B versus pretrained lightweight models.",
+        [None, None, None, ",.1f", ".2f", None, ".2f", ".2f", ".2f", ".2f", ".2f"],
     )
 
 
@@ -400,11 +410,17 @@ def plot_confusion_matrix(
 
 
 def plot_tradeoff_scatter(
-    x_metric: str = "trainable_params",
+    x_metric: str = "total_params",
     write: bool = True,
 ) -> Figure:
-    if x_metric not in {"trainable_params", "macs"}:
-        raise ValueError("x_metric must be trainable_params or macs")
+    """Test accuracy against one cost for Model B and the pretrained backbones.
+
+    ``total_params`` tracks memory: a device stores every weight, frozen or not.
+    ``macs`` tracks compute. ``trainable_params`` counts only the weights that
+    fine-tuning updated, so it suits training cost rather than deployment.
+    """
+    if x_metric not in {"total_params", "trainable_params", "macs"}:
+        raise ValueError("x_metric must be total_params, trainable_params or macs")
 
     points = []
 
@@ -437,7 +453,7 @@ def plot_tradeoff_scatter(
             s=70,
         )
         axis.annotate(
-            model_name,
+            label_for(model_name),
             (cost, accuracy),
             xytext=(6, 6),
             textcoords="offset points",
@@ -450,7 +466,7 @@ def plot_tradeoff_scatter(
             frontier.append(point)
             best_accuracy = point[2]
 
-    if frontier:
+    if len(frontier) > 1:  # one point dominates the rest: there is no frontier to draw
         axis.plot(
             [point[1] for point in frontier],
             [point[2] for point in frontier],
@@ -460,15 +476,19 @@ def plot_tradeoff_scatter(
         )
         axis.legend()
 
+    cost_label, cost_name = {
+        "total_params": ("Total parameters", "parameters"),
+        "trainable_params": ("Trainable parameters", "trainable parameters"),
+        "macs": ("MACs per image", "MACs"),
+    }[x_metric]
     axis.set_xscale("log")
-    axis.set_xlabel("Trainable parameters" if x_metric == "trainable_params" else "MACs per image")
+    axis.margins(x=0.2, y=0.15)  # room for the labels beside the outermost points
+    axis.set_xlabel(f"{cost_label} (log scale)")
     axis.set_ylabel("Test accuracy (%)")
-    axis.set_title("Accuracy versus model cost")
+    axis.set_title(f"Test accuracy versus {cost_name}")
     figure.tight_layout()
 
-    filename = (
-        "accuracy_vs_params.png" if x_metric == "trainable_params" else "accuracy_vs_macs.png"
-    )
+    filename = "accuracy_vs_macs.png" if x_metric == "macs" else "accuracy_vs_params.png"
 
     if write:
         save_figure(
