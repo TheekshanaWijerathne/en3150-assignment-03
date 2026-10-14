@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 from matplotlib.figure import Figure
+from matplotlib.ticker import EngFormatter
 
 from edgecnn.contracts import paths, schema
 from edgecnn.evaluation.plotting import (
@@ -481,9 +482,15 @@ def plot_tradeoff_scatter(
         "trainable_params": ("Trainable parameters", "trainable parameters"),
         "macs": ("MACs per image", "MACs"),
     }[x_metric]
-    axis.set_xscale("log")
+    costs = [point[1] for point in points]
+    # A log axis only when the costs span more than ten times: within one decade it has
+    # no round ticks, and matplotlib's fallback labels overlap.
+    log_scale = min(costs) > 0 and max(costs) > 10 * min(costs)
+    if log_scale:
+        axis.set_xscale("log")
+    axis.xaxis.set_major_formatter(EngFormatter(sep=""))  # 100k, 1M, 14M
     axis.margins(x=0.2, y=0.15)  # room for the labels beside the outermost points
-    axis.set_xlabel(f"{cost_label} (log scale)")
+    axis.set_xlabel(f"{cost_label} (log scale)" if log_scale else cost_label)
     axis.set_ylabel("Test accuracy (%)")
     axis.set_title(f"Test accuracy versus {cost_name}")
     figure.tight_layout()

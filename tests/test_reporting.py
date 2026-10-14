@@ -149,15 +149,22 @@ def test_parameter_scatter_counts_every_stored_weight(results) -> None:
     axis = reporting.plot_tradeoff_scatter("total_params", write=False).axes[0]
     points = {text.get_text(): text.xy[0] for text in axis.texts}
     assert points == {"Model B": 71_818, "MobileNetV2": 2_236_682, "SqueezeNet 1.1": 727_626}
+    assert axis.get_xscale() == "log"  # 71k to 2.2M: more than a decade
     assert axis.get_xlabel() == "Total parameters (log scale)"
     assert axis.get_legend() is None  # Model B is cheapest and most accurate: no frontier
 
 
 def test_mac_scatter_draws_the_frontier_through_the_undominated_models(results) -> None:
-    axis = reporting.plot_tradeoff_scatter("macs", write=False).axes[0]
+    figure = reporting.plot_tradeoff_scatter("macs", write=False)
+    axis = figure.axes[0]
     (frontier,) = axis.get_lines()
     assert list(frontier.get_xdata()) == [6_312_896, 12_989_568]  # MobileNetV2, then Model B
     assert [text.get_text() for text in axis.get_legend().get_texts()] == ["Pareto frontier"]
+    # 6.3M to 21.9M spans less than a decade: a linear axis, labelled in millions
+    assert axis.get_xscale() == "linear" and axis.get_xlabel() == "MACs per image"
+    figure.canvas.draw()
+    labels = [label.get_text() for label in axis.get_xticklabels() if label.get_text()]
+    assert labels and all(label.endswith("M") for label in labels)
 
 
 def test_nothing_is_written_unless_asked(results) -> None:
