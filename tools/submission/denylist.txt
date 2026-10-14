@@ -1,0 +1,17 @@
+# Words that must never appear in the submission: member names, GitHub usernames, emails.
+# One per line, matched as whole words, ignoring case. This file is never copied into the submission.
+# Index numbers are caught by a pattern in tools/build_submission.py.
+Thejitha
+Abeyrathna
+Susa
+Dilmin
+SusaDDilmin
+Theekshana
+Wijerathne
+TheekshanaWijerathne
+Harsha
+Yohan
+Dankotuwa
+HarshaYohan
+ThejithaR
+ramalthejitha20
