@@ -19,7 +19,7 @@ shared library, `src/edgecnn/`. How the two fit together, and your day-to-day wo
 | [`07_final_comparison`](07_final_comparison.ipynb) | M4 | 3, 4, 6 | — | all comparison tables, trade-off figures, `report/figures/` |
 
 Notebooks never share variables. They communicate only through committed files — the five seams in
-the [root README](../README.md#the-five-seams). So each notebook runs on its own, in any session, on
+the [development guide](../DEVELOPMENT.md#the-five-seams). So each notebook runs on its own, in any session, on
 any machine.
 
 **Official run order:** `01` → `02` → `03` → `04` → `05` → `06` → `07`. `04` reads Model B's run from
