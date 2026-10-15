@@ -76,8 +76,8 @@ The six runs are `model_b_sgd`, `model_b_sgd_momentum`, `model_b_adam`, `model_a
   and confusion matrix exactly; only the timings differed. Another GPU or other versions may change
   the last digits.
 - The reported numbers come from these machines:
-  - training (`03`, `04`, `05`): not recorded yet (the notebook has not been run)
-  - latency (`06`): not recorded yet (the notebook has not been run)
+  - training (`03`, `04`, `05`): cuda:0 (Tesla T4); Python 3.13.15 (Linux), PyTorch 2.11.0+cu130, torchvision 0.26.0+cu130, NumPy 2.1.3
+  - latency (`06`): cpu (11th Gen Intel Core i5-11400H @ 2.70GHz); Python 3.11.3 (Windows), PyTorch 2.14.0+cu126, torchvision 0.29.0+cu126, NumPy 2.4.6
 
 ## Source repository
 
