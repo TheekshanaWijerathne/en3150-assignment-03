@@ -38,17 +38,44 @@ other through the `results/` folder, so they must share it:
 `results/` already holds the results of our runs, the numbers in the report, so `06` and `07` can
 also run without any training. Running a notebook overwrites its own result files.
 
-**Locally** (Jupyter or VS Code): Python 3.10 or newer, and the packages in `requirements.txt`.
-If you have an NVIDIA GPU, install the CUDA build of PyTorch from <https://pytorch.org> first.
+Everything a notebook downloads or writes stays inside the folder it runs from: `data/`,
+`checkpoints/` and `results/`.
 
-**On Google Colab**: choose a GPU runtime and make this folder the working directory, for example
-by uploading it to Google Drive. Colab already provides every package needed. Each Colab notebook
-runs on its own machine, so notebooks opened one after another do not see each other's files unless
-the folder is shared through Google Drive.
+### Locally (Jupyter or VS Code)
 
-**Downloads:** EuroSAT through torchvision (about 94 MB, into `data/`) and the ImageNet weights of
-MobileNetV2 and SqueezeNet 1.1 (about 14 MB and 5 MB, into `data/torch_hub/`). Trained weights are
-saved in `checkpoints/`.
+Python 3.10 or newer, and the packages in `requirements.txt` (`pip install -r requirements.txt`).
+With an NVIDIA GPU, install the CUDA build of PyTorch from <https://pytorch.org> first. Unzip the
+folder, open the notebooks from it, and run them in order.
+
+### On Google Colab
+
+Colab already provides every package needed. Two ways:
+
+**All notebooks in one session** (they share their files, as when run locally):
+
+1. Open a new notebook, choose **Runtime > Change runtime type > T4 GPU**, and upload
+   `Misclassified_A03_EN3150.zip` in the **Files** panel on the left.
+2. Run, in one cell:
+
+   ```
+   !unzip -q Misclassified_A03_EN3150.zip
+   %cd Misclassified_A03_EN3150
+   ```
+
+3. Then run each notebook in order, one per cell: `%run 01_data_preparation.ipynb`, then
+   `%run 02_custom_architectures.ipynb`, and so on to `%run 07_final_comparison.ipynb`. Printed
+   results and figures appear under each cell; the full tables are written to `results/`.
+
+**One notebook at a time:** upload a single notebook with **File > Upload notebook**, choose a GPU
+runtime and run all. Every notebook runs this way except `07`, which needs the result files of `03`
+to `06`, and `04` then skips its comparison with Model B. Each Colab notebook runs on its own
+machine, so files written by one are not seen by the next.
+
+### Downloads and disk space
+
+EuroSAT through torchvision (about 94 MB, into `data/`), a cache of the decoded images (about
+330 MB, also in `data/`), and the ImageNet weights of MobileNetV2 and SqueezeNet 1.1 (about 14 MB
+and 5 MB, into `data/torch_hub/`). Trained weights are saved in `checkpoints/`.
 
 ## Results
 
