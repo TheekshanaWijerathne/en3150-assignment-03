@@ -226,17 +226,25 @@ def write_notebooks(force: bool) -> list[Path]:
     return written
 
 
-def environment(notebook: Path) -> str | None:
-    """The device and versions a notebook printed in its setup cell, if it has run."""
+def environment(notebook: Path, device_line: str = r"Device\s{2,}") -> str | None:
+    """The device and versions a notebook printed, if it has run.
+
+    ``device_line`` picks the line naming the device that matters: the setup
+    cell's ``Device`` for training, ``Latency is measured on:`` for the benchmark,
+    which times the CPU even on a machine with a GPU.
+    """
     if not notebook.exists():
         return None
     values: dict[str, str] = {}
     for cell in json.loads(notebook.read_text(encoding="utf-8"))["cells"]:
         for output in cell.get("outputs", []):
             for line in _output_text(output).splitlines():
-                match = re.match(r"^(Python|PyTorch|torchvision|NumPy|Device)\s{2,}(.+)$", line)
+                match = re.match(r"^(Python|PyTorch|torchvision|NumPy)\s{2,}(.+)$", line)
                 if match:
                     values.setdefault(match.group(1), match.group(2).strip())
+                device = re.match(rf"^{device_line}(.+)$", line)
+                if device:
+                    values.setdefault("Device", device.group(1).strip())
     if "Device" not in values:
         return None
     versions = ", ".join(
@@ -257,7 +265,8 @@ def write_docs() -> list[Path]:
         )
         .replace(
             "{{benchmark_environment}}",
-            environment(TARGET / "06_resource_benchmark.ipynb") or pending,
+            environment(TARGET / "06_resource_benchmark.ipynb", r"Latency is measured on:\s*")
+            or pending,
         )
     )
     targets = [TARGET / "README.md", TARGET / "requirements.txt"]

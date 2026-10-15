@@ -4,15 +4,20 @@
     python tools/run_submission.py 06 07              the benchmark and the tables: on the laptop
     python tools/run_submission.py --smoke DIR        a quick check of every notebook, in a copy
                                                       in DIR with one epoch per training run
+    python tools/run_submission.py --clean            only tidy the outputs of executed notebooks
 
 Each notebook runs in a fresh kernel with the submission folder as its working directory, so they
 share data/, checkpoints/ and results/ exactly as a reader running them in order would. What the
 notebooks print, such as each training epoch, is echoed here as it happens.
+
+On Colab, pandas tables come wrapped in Colab's "interactive table" button and its JavaScript.
+After each run the wrapper is removed, leaving pandas' standard table, as any Jupyter shows it.
 """
 
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import sys
 import time
@@ -36,7 +41,33 @@ class EchoingClient(NotebookClient):
         return super().output(outs, msg, display_id, cell_index)
 
 
+#: pandas' own table HTML, inside Colab's interactive-table wrapper.
+PANDAS_TABLE = re.compile(
+    r"<div>\s*<style scoped>.*?</table>(?:\s*<p>[^<]*</p>)?\s*</div>", re.DOTALL
+)
+
+
+def unwrap_colab_tables(notebook: nbformat.NotebookNode) -> int:
+    """Replace Colab's interactive-table wrapper by the pandas table it wraps; returns the count."""
+    count = 0
+    for cell in notebook.cells:
+        for output in cell.get("outputs", []):
+            html = output.get("data", {}).get("text/html")
+            if html is None:
+                continue
+            html = "".join(html) if isinstance(html, list) else html
+            if "colab-df-container" not in html:
+                continue
+            table = PANDAS_TABLE.search(html)
+            if table is None:
+                raise ValueError("a Colab table without a pandas table inside it")
+            output["data"]["text/html"] = table.group(0)
+            count += 1
+    return count
+
+
 def save(notebook: nbformat.NotebookNode, path: Path) -> None:
+    unwrap_colab_tables(notebook)
     text = nbformat.writes(notebook)
     path.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8", newline="\n")
 
@@ -82,8 +113,19 @@ def main() -> int:
         type=Path,
         help="run every notebook in a copy in DIR, with one epoch per training run",
     )
+    parser.add_argument(
+        "--clean", action="store_true", help="only tidy the outputs of executed notebooks"
+    )
     args = parser.parse_args()
 
+    if args.clean:
+        for path in sorted(TARGET.glob("*.ipynb")):
+            notebook = nbformat.read(path, as_version=4)
+            count = unwrap_colab_tables(notebook)
+            if count:
+                save(notebook, path)
+                print(f"{path.name}: unwrapped {count} Colab table(s)")
+        return 0
     if args.smoke:
         destination = args.smoke.resolve()
         destination.mkdir(parents=True, exist_ok=True)
