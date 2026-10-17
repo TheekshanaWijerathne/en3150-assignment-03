@@ -62,14 +62,38 @@ Colab already provides every package needed. Two ways:
    %cd Misclassified_A03_EN3150
    ```
 
-3. Then run each notebook in order, one per cell: `%run 01_data_preparation.ipynb`, then
-   `%run 02_custom_architectures.ipynb`, and so on to `%run 07_final_comparison.ipynb`. Printed
-   results and figures appear under each cell; the full tables are written to `results/`.
+3. Run the notebooks **from this same notebook**, in order, one per cell:
+   `%run 01_data_preparation.ipynb`, then `%run 02_custom_architectures.ipynb`, and so on to
+   `%run 07_final_comparison.ipynb`. Printed results and figures appear under each cell; the full
+   tables are written to `results/`.
+
+Do not double-click the notebooks in the **Files** panel: Colab shows a file from there only as raw
+text. To read a notebook with its saved outputs, open it on GitHub (see below), or in Colab with
+**File > Open notebook > GitHub**.
+
+**From Google Drive:** a notebook opened from Drive still runs in Colab's temporary `/content`
+folder, not in its Drive folder, so its files would not reach Drive, and unpacking the dataset
+(27,000 files) inside Drive would be slow. Copy the folder to the Colab machine instead, run it
+there, and copy the results back. In a new GPU notebook, change the Drive path below to where the
+folder is, then run:
+
+```
+from google.colab import drive
+drive.mount("/content/drive")
+!cp -r "/content/drive/MyDrive/Misclassified_A03_EN3150" /content
+%cd /content/Misclassified_A03_EN3150
+```
+
+Then `%run` the notebooks in order as above. To keep the new results in Drive afterwards:
+`!cp -r results "/content/drive/MyDrive/Misclassified_A03_EN3150"`.
 
 **One notebook at a time:** upload a single notebook with **File > Upload notebook**, choose a GPU
 runtime and run all. Every notebook runs this way except `07`, which needs the result files of `03`
 to `06`, and `04` then skips its comparison with Model B. Each Colab notebook runs on its own
 machine, so files written by one are not seen by the next.
+
+No account, key or secret is needed: the notebooks download only public data (EuroSAT) and public
+ImageNet weights.
 
 ### Downloads and disk space
 

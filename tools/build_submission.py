@@ -34,6 +34,17 @@ NOTEBOOK_TEXTS = SOURCE / "notebooks"
 TARGET = ROOT / "submission" / "Misclassified_A03_EN3150"
 REPOSITORY = "https://github.com/TheekshanaWijerathne/en3150-assignment-03"
 
+#: Exact strings the gate lets through: the repository link (it contains a username), and the
+#: README's instructions for running from Google Drive. Anything else from google.colab, such as
+#: reading secrets, and any other machine path is still refused.
+ALLOWED = (
+    REPOSITORY,
+    "from google.colab import drive",
+    'drive.mount("/content/drive")',
+    "/content/drive/MyDrive/Misclassified_A03_EN3150",
+    "/content/Misclassified_A03_EN3150",
+)
+
 FENCE = re.compile(r"^```python\s*$")
 INCLUDE = re.compile(r"^<!--\s*include:\s*([\w-]+)\s*-->\s*$")
 KERNELSPEC = {"display_name": "Python 3", "language": "python", "name": "python3"}
@@ -87,7 +98,8 @@ def _denylist() -> re.Pattern[str]:
 
 def scan(text: str, where: str) -> list[str]:
     """Every gate violation in ``text``, described with ``where`` it was found."""
-    text = text.replace(REPOSITORY, "")  # the repository link is wanted, username and all
+    for allowed in ALLOWED:
+        text = text.replace(allowed, "")
     hits = []
 
     def add(match: re.Match[str], reason: str) -> None:
