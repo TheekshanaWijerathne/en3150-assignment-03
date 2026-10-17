@@ -62,6 +62,17 @@ def test_the_gate_catches(text) -> None:
     assert build.scan(text, "probe")
 
 
+def test_the_gate_allows_only_the_drive_instructions_from_colab() -> None:
+    instructions = (
+        'from google.colab import drive\ndrive.mount("/content/drive")\n'
+        '!cp -r "/content/drive/MyDrive/Misclassified_A03_EN3150" /content\n'
+        "%cd /content/Misclassified_A03_EN3150"
+    )
+    assert build.scan(instructions, "probe") == []
+    assert build.scan("from google.colab import userdata", "probe")  # reading secrets
+    assert build.scan("%cd /content/other_folder", "probe")
+
+
 def test_the_gate_allows_the_repository_link_and_ordinary_code() -> None:
     text = (
         f"see <{build.REPOSITORY}> and https://pytorch.org; f'{{value:,.1f}}'; "
