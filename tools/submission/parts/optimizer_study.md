@@ -54,5 +54,6 @@ def summarize_study(histories):
             "final train - val gap": last["train_acc"] - last["val_acc"],
             "mean epoch time (s)": sum(row["epoch_time_s"] for row in epochs) / len(epochs),
         }
-    return pd.DataFrame(rows).T
+    # One row per run, so that each column keeps its own type: epochs stay whole numbers.
+    return pd.DataFrame.from_dict(rows, orient="index")
 ```
