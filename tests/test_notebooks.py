@@ -114,8 +114,12 @@ def test_second_cell_sets_mode_and_autoreload(stem: str) -> None:
 @pytest.mark.parametrize("stem", SECTION_NOTEBOOKS)
 def test_code_cells_are_valid_python(stem: str) -> None:
     for index, source in enumerate(_code_cells(_load(stem))):
+        # A magic becomes `pass`, not nothing: cell 2 runs its magics inside a try block.
         without_magics = "\n".join(
-            line for line in source.splitlines() if not line.lstrip().startswith(("%", "!"))
+            line[: len(line) - len(line.lstrip())] + "pass"
+            if line.lstrip().startswith(("%", "!"))
+            else line
+            for line in source.splitlines()
         )
         try:
             ast.parse(without_magics)
