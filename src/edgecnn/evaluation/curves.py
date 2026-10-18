@@ -127,7 +127,7 @@ def plot_optimizer_overlay(sources: list[HistorySource], write: bool = False) ->
     import matplotlib.pyplot as plt
 
     from edgecnn.contracts import paths
-    from edgecnn.evaluation.plotting import OPTIMIZER_COLORS
+    from edgecnn.evaluation.plotting import OPTIMIZER_COLORS, label_for
 
     if not sources:
         raise ValueError("optimizer overlay requires at least one history")
@@ -148,13 +148,13 @@ def plot_optimizer_overlay(sources: list[HistorySource], write: bool = False) ->
         loss_ax.plot(
             x,
             [row["val_loss"] for row in epochs],
-            label=optimizer.replace("_", " ").title(),
+            label=label_for(optimizer, "optimizer"),
             color=color,
         )
         acc_ax.plot(
             x,
             [row["val_acc"] for row in epochs],
-            label=optimizer.replace("_", " ").title(),
+            label=label_for(optimizer, "optimizer"),
             color=color,
         )
         loss_ax.scatter(

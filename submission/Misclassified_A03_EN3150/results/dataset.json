@@ -1,0 +1,31 @@
+{
+  "num_images": 27000,
+  "class_names": [
+    "AnnualCrop",
+    "Forest",
+    "HerbaceousVegetation",
+    "Highway",
+    "Industrial",
+    "Pasture",
+    "PermanentCrop",
+    "Residential",
+    "River",
+    "SeaLake"
+  ],
+  "split_counts": {
+    "train": 18900,
+    "val": 4050,
+    "test": 4050
+  },
+  "split_sha256": "9fc7491cc0b8266013ca7f91e4a0988f39464988545251ee1361552823ea162b",
+  "norm_mean": [
+    0.34390074678501115,
+    0.37995412566269177,
+    0.4075493409117746
+  ],
+  "norm_std": [
+    0.20242460538119916,
+    0.13668293751641206,
+    0.11540833380045462
+  ]
+}

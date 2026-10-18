@@ -1,6 +1,7 @@
 # `report/`
 
-The submitted document. The filename format is mandated: **`<GroupNo>_A03_EN3150.pdf`**.
+The submitted document. The filename format is mandated: **`<GroupNo>_A03_EN3150.pdf`**; our group is named, not
+numbered, so ours is **`Misclassified_A03_EN3150.pdf`**.
 
 The code and the report are uploaded **separately** to Moodle, once per group. The code submission is
 the repository — the section notebooks, committed with their outputs, are its readable,

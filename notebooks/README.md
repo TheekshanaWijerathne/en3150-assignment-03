@@ -13,13 +13,13 @@ shared library, `src/edgecnn/`. How the two fit together, and your day-to-day wo
 | [`01_data_preparation`](01_data_preparation.ipynb) | M1 | 1 | — | `data/splits/*`, `results/figures/dataset/*` |
 | [`02_custom_architectures`](02_custom_architectures.ipynb) | M2 | 2 | — | `results/tables/custom_architectures.md`, `param_breakdown.md` |
 | [`03_optimizer_study`](03_optimizer_study.ipynb) | M3 | 3 | `model_b` × SGD, SGD+momentum, Adam | 3 × history + test metrics, curves, optimizer overlay |
-| [`04_custom_training_evaluation`](04_custom_training_evaluation.ipynb) | M3 | 4 | `model_a` | history + test metrics, curves, confusion matrix |
+| [`04_custom_training_evaluation`](04_custom_training_evaluation.ipynb) | M3 | 4 | `model_a` | history + test metrics, curves, confusion matrix; Model B's confusion matrix |
 | [`05_pretrained_finetuning`](05_pretrained_finetuning.ipynb) | M4 | 5 | `mobilenet_v2`, `squeezenet1_1` | 2 × history + test metrics, curves, confusion matrices |
 | [`06_resource_benchmark`](06_resource_benchmark.ipynb) | M1 | 4, 6 | — | `resources.json` for all six runs |
 | [`07_final_comparison`](07_final_comparison.ipynb) | M4 | 3, 4, 6 | — | all comparison tables, trade-off figures, `report/figures/` |
 
 Notebooks never share variables. They communicate only through committed files — the five seams in
-the [root README](../README.md#the-five-seams). So each notebook runs on its own, in any session, on
+the [development guide](../DEVELOPMENT.md#the-five-seams). So each notebook runs on its own, in any session, on
 any machine.
 
 **Official run order:** `01` → `02` → `03` → `04` → `05` → `06` → `07`. `04` reads Model B's run from

@@ -121,10 +121,10 @@ Each function you own exists as a stub whose docstring states what it takes, wha
 writes, and the traps to avoid. **Keep the stub's signature.** Other members' notebooks are already
 calling it with those arguments.
 
-When you implement a stub, **rewrite its docstring for a reader**. The final submission notebook
-contains our code but none of our internal notes — no member details, no team process. Anything
-only the team needs goes under a `Team notes:` line or a `# team:` comment. The rules are in
-[SUBMISSION.md §6](SUBMISSION.md#6-how-internal-material-gets-removed).
+When you implement a stub, **rewrite its docstring for a reader**. The submitted code contains
+none of our internal notes — no member details, no team process. Anything only the team needs goes
+under a `Team notes:` line or a `# team:` comment. What the submission must never contain is in
+[SUBMISSION.md §4](SUBMISSION.md#4-what-must-never-appear-in-it).
 
 ### `MODE` — one switch in every notebook
 
@@ -211,7 +211,7 @@ Open a PR. Once it is merged, Member 3's notebook `03` trains the real Model B i
 Nobody reads anyone else's code. Work moves through five **seams**: fixed objects and files whose
 formats are frozen in [`src/edgecnn/contracts/`](src/edgecnn/contracts/) and
 [`configs/contracts/`](configs/contracts/).
-The [root README](README.md#the-five-seams) describes them.
+The [development guide](DEVELOPMENT.md#the-five-seams) describes them.
 
 | When this lands | Published by | It unblocks | Until then, others use |
 |---|---|---|---|
@@ -237,7 +237,7 @@ enough to build against.
 ### Branches and ownership
 
 - Branch naming: `m<n>/<topic>` — `m1/eurosat-loader`, `m3/trainer`.
-- **Edit only your own files and notebooks** ([README → work split](README.md#how-the-work-is-split)).
+- **Edit only your own files and notebooks** ([development guide → work split](DEVELOPMENT.md#how-the-work-is-split)).
   Each notebook has one owner, so notebook merge conflicts should not happen.
 - **One open branch per notebook at a time.** Two branches editing the same notebook is the one way
   to get a notebook conflict.

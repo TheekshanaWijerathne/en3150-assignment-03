@@ -1,0 +1,54 @@
+{
+  "model_a": {
+    "model": "model_a",
+    "trainable_params": 1143466,
+    "total_params": 1143466,
+    "model_size_kb": 4475.1572265625,
+    "macs": 42337536,
+    "latency_ms": 3.304587000202446,
+    "latency_median_ms": 3.253200000472134,
+    "peak_memory_mb": 5.36370849609375,
+    "device": "cpu (11th Gen Intel Core i5-11400H @ 2.70GHz)",
+    "latency_threads": 1,
+    "latency_repeats": 100
+  },
+  "model_b": {
+    "model": "model_b",
+    "trainable_params": 71818,
+    "total_params": 71818,
+    "model_size_kb": 303.9326171875,
+    "macs": 12989568,
+    "latency_ms": 3.4000499999092426,
+    "latency_median_ms": 3.2981499989546137,
+    "peak_memory_mb": 1.2806243896484375,
+    "device": "cpu (11th Gen Intel Core i5-11400H @ 2.70GHz)",
+    "latency_threads": 1,
+    "latency_repeats": 100
+  },
+  "mobilenet_v2": {
+    "model": "mobilenet_v2",
+    "trainable_params": 1218890,
+    "total_params": 2236682,
+    "model_size_kb": 8971.1357421875,
+    "macs": 24461312,
+    "latency_ms": 6.2239559999943594,
+    "latency_median_ms": 5.817199999000877,
+    "peak_memory_mb": 9.412788391113281,
+    "device": "cpu (11th Gen Intel Core i5-11400H @ 2.70GHz)",
+    "latency_threads": 1,
+    "latency_repeats": 100
+  },
+  "squeezenet1_1": {
+    "model": "squeezenet1_1",
+    "trainable_params": 391306,
+    "total_params": 727626,
+    "model_size_kb": 2860.6943359375,
+    "macs": 17022656,
+    "latency_ms": 3.2871879997765063,
+    "latency_median_ms": 2.932350000264705,
+    "peak_memory_mb": 3.0652236938476562,
+    "device": "cpu (11th Gen Intel Core i5-11400H @ 2.70GHz)",
+    "latency_threads": 1,
+    "latency_repeats": 100
+  }
+}

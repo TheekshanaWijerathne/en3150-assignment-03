@@ -1,292 +1,131 @@
-# EN3150 Assignment 03 — Resource-Constrained CNN for Edge Image Classification
+# CNNs for land-cover classification on small devices
 
-A study of the trade-off between **accuracy, memory footprint and computational cost** for image
-classifiers targeting embedded and low-resource devices. Two custom CNNs are designed and trained
-from scratch, compared against two fine-tuned lightweight state-of-the-art backbones, on identical
-data splits.
+**EN3150 Assignment 03, group Misclassified.**
+
+How much accuracy does an image classifier need to give up to run on a small, low-power device,
+and what does it gain in return? This project trains two convolutional networks of our own design
+on satellite images, fine-tunes two well-known lightweight networks on the same data, and measures
+each model's accuracy against what it costs to store and to run: parameters, size on disk,
+multiply-accumulates, CPU latency and peak memory.
 
 | | |
 |---|---|
-| **Group number** | _to be added_ |
-| **Members** | _to be added — name + index number, all four_ |
-| **Dataset** | EuroSAT — 27,000 satellite images, 10 classes, natively 64×64 RGB |
+| **Dataset** | EuroSAT: 27,000 Sentinel-2 satellite images, 64×64 pixels, 10 land-cover classes |
+| **Models** | Model A (standard CNN), Model B (depthwise-separable CNN under 100,000 parameters), MobileNetV2 and SqueezeNet 1.1 (pretrained on ImageNet) |
 | **Framework** | PyTorch |
-| **Report file** | `<GroupNo>_A03_EN3150.pdf` |
-| **Repository** | https://github.com/ThejithaR/EN3150-Assignment-03-CNN |
+| **Code we submit** | [`submission/Misclassified_A03_EN3150/`](submission/Misclassified_A03_EN3150/): seven self-contained notebooks |
+| **Report** | `Misclassified_A03_EN3150.pdf` |
 
 ---
 
-## Quick start
+## Results
 
-```powershell
-git clone https://github.com/ThejithaR/EN3150-Assignment-03-CNN.git
-cd EN3150-Assignment-03-CNN
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1          # macOS/Linux: source .venv/bin/activate
-pip install -e ".[dev]"
-pytest tests/contracts                # should be green
-```
+All four models were trained and tested on the same split. Test accuracy is measured on 4,050
+held-out images; latency is one image at a time on one CPU thread.
 
-Then open [`notebooks/00_setup.ipynb`](notebooks/00_setup.ipynb) in VS Code, select the `.venv`
-kernel, and run it top to bottom.
+| Model | Parameters | Size | MACs per image | CPU latency | Peak memory | Test accuracy |
+|---|---:|---:|---:|---:|---:|---:|
+| Model A | 1,143,466 | 4,475 KB | 42.3 M | 3.30 ms | 5.36 MB | 95.85% |
+| **Model B** | **71,818** | **304 KB** | **13.0 M** | 3.40 ms | **1.28 MB** | **96.17%** |
+| MobileNetV2 | 2,236,682 | 8,971 KB | 24.5 M | 6.22 ms | 9.41 MB | 95.38% |
+| SqueezeNet 1.1 | 727,626 | 2,861 KB | 17.0 M | 3.29 ms | 3.07 MB | 94.22% |
 
-`-e` is an *editable* install: it records where your source folder is, so **your edits take effect
-immediately, with no rebuild**. Re-run it only when `pyproject.toml` dependencies change.
-**Before writing any code, read [CONTRIBUTING.md](CONTRIBUTING.md)** — the developer guide.
+Of the pretrained models' parameters, only the fine-tuned part was trained: 1,218,890 of
+MobileNetV2's and 391,306 of SqueezeNet's. A device must still store all of them.
 
----
+Model B with three optimizers:
 
-## How development works
+| Optimizer | Learning rate | Test accuracy | Best validation accuracy | Epoch reaching 90% of its best |
+|---|---:|---:|---:|---:|
+| SGD | 0.01 | 90.25% | 89.83% | 5 |
+| SGD + momentum (0.9) | 0.01 | 96.32% | 96.25% | 4 |
+| Adam | 0.001 | 96.17% | 96.25% | 3 |
 
-Experiments run in **notebooks**, one per assignment section. The code those notebooks call lives in a
-shared **library**, `src/edgecnn/`.
+**What the results show**
 
-```
-scratch notebook          src/edgecnn/*.py             section notebook 0X
-try an idea  ──promote──►  shared library  ◄──import──  run step by step, see every result
-                                                            │  MODE = "official"
-                                                            ▼
-                                           results/*.json + notebook with outputs
-                                                            │  git push
-                                                            ▼
-                                           the next member's notebook reads it
-```
+- **Model B is the most accurate of the four models** while having 16 times fewer parameters than
+  Model A, 31 times fewer than MobileNetV2, and the smallest peak memory by far.
+- **Fewer computations did not mean a faster model.** Model B needs 3.3 times fewer
+  multiply-accumulates than Model A, yet the two take 3.40 and 3.30 ms per image on one CPU thread.
+  A likely reason: depthwise convolutions do little arithmetic for each value they read from
+  memory, so the processor spends more of its time moving data than computing.
+- **Momentum is what makes SGD work here:** it lifts test accuracy from 90.25% to 96.32%, level
+  with Adam. Adam converges fastest.
+- **The pretrained models are handicapped by the 64×64 input,** which they were not designed for:
+  MobileNetV2's total stride of 32 leaves a 2×2 feature map. They were deliberately not upsampled
+  to their native 224×224, so that every model's cost is measured at the resolution the sensor
+  produces.
 
-1. **Prototype** in your own `notebooks/scratch/` notebook.
-2. **Promote** it into its stub in `src/edgecnn/` as soon as it works. Every stub's docstring says
-   what to build. Notebooks are never "converted to .py" at the end — only functions move, one at a
-   time.
-3. **Run** it in your section notebook with `MODE = "synthetic"`, then `"debug"`, checking every
-   step's output.
-4. **Official run:** `MODE = "official"`, Restart & Run All, then commit the notebook *with its
-   outputs* together with the files it wrote.
+<p align="center">
+  <img src="submission/Misclassified_A03_EN3150/results/figures/accuracy_vs_params.png" width="48%" alt="Test accuracy against total parameters">
+  <img src="submission/Misclassified_A03_EN3150/results/figures/optimizer_overlay.png" width="48%" alt="Validation loss and accuracy of the three optimizers">
+</p>
 
-Only official runs write results, so debug work can never leak into the report. Full workflow,
-worked example and troubleshooting: [CONTRIBUTING.md](CONTRIBUTING.md). Notebook reference:
-[notebooks/README.md](notebooks/README.md). Laptop too slow for a run? [COLAB.md](COLAB.md).
+Every table, figure, training curve and confusion matrix is in
+[`submission/Misclassified_A03_EN3150/results/`](submission/Misclassified_A03_EN3150/results/).
 
 ---
 
-## How the work is split
+## Method
 
-The project is cut **horizontally**: each member owns one layer of the stack. The layers map almost
-one-to-one onto the assignment's marking sections, so each person defends their own marks.
+- **Data.** EuroSAT through torchvision, split 70 / 15 / 15 (18,900 / 4,050 / 4,050 images),
+  stratified by class, with a fixed seed. Normalisation statistics come from the training images
+  only. Training images are randomly flipped and turned by quarter turns in every epoch; validation
+  and test images never are.
+- **Model A** stacks three blocks of 3×3 convolution, batch normalisation, ReLU and max pooling,
+  then a fully connected head on the flattened feature maps. It is the unconstrained reference.
+- **Model B** uses a standard 3×3 stem, four depthwise-separable blocks, global average pooling and
+  ReLU6 activations. Its parameter budget is checked by an automated test.
+- **MobileNetV2 and SqueezeNet 1.1** start from ImageNet weights. Their classifiers are replaced by
+  a 10-class layer, and only that layer and the last few feature blocks are fine-tuned, the blocks
+  at a tenth of the learning rate. Inputs are normalised with ImageNet's statistics.
+- **Training.** One training loop for all models: 30 epochs, batch size 64, cosine learning-rate
+  decay, early stopping on validation accuracy (never before epoch 20). The checkpoint with the
+  best validation accuracy is evaluated once on the test split.
+- **Evaluation.** Accuracy, macro-averaged precision, recall and F1, and confusion matrices.
+- **Costs.** Measured by one code path for every model: parameters, the size of the saved weights,
+  multiply-accumulates of convolutions and fully connected layers, single-thread CPU latency at batch
+  size 1 (mean of 100 runs after 10 warm-up runs), and peak memory worked out from the model's
+  graph.
+- **Hardware.** Training on an NVIDIA T4 (Google Colab); latency on an Intel Core i5-11400H.
 
-| | **Member 1** — Data & Infrastructure | **Member 2** — Custom Architectures | **Member 3** — Training & Optimization | **Member 4** — SOTA & Comparison |
-|---|---|---|---|---|
-| **Name** | _tbd_ | _tbd_ | _tbd_ | _tbd_ |
-| **Notebooks** | [`00_setup`](notebooks/00_setup.ipynb), [`01_data_preparation`](notebooks/01_data_preparation.ipynb), [`06_resource_benchmark`](notebooks/06_resource_benchmark.ipynb) | [`02_custom_architectures`](notebooks/02_custom_architectures.ipynb) | [`03_optimizer_study`](notebooks/03_optimizer_study.ipynb), [`04_custom_training_evaluation`](notebooks/04_custom_training_evaluation.ipynb) | [`05_pretrained_finetuning`](notebooks/05_pretrained_finetuning.ipynb), [`07_final_comparison`](notebooks/07_final_comparison.ipynb) |
-| **Library** | [data/](src/edgecnn/data/), [utils/](src/edgecnn/utils/), [config/](src/edgecnn/config/), [contracts/](src/edgecnn/contracts/)\*, `evaluation/{metrics,benchmark,plotting}.py` | [models/custom/](src/edgecnn/models/custom/), [registry.py](src/edgecnn/models/registry.py)\* | [training/](src/edgecnn/training/), [evaluation/curves.py](src/edgecnn/evaluation/curves.py) | [models/pretrained/](src/edgecnn/models/pretrained/), [evaluation/reporting.py](src/edgecnn/evaluation/reporting.py) |
-| **Configs** | [base.yaml](configs/base.yaml), [stages/data.yaml](configs/stages/data.yaml), [contracts/](configs/contracts/) | [stages/models.yaml](configs/stages/models.yaml) | [stages/training.yaml](configs/stages/training.yaml), [experiments/](configs/experiments/) | [stages/pretrained.yaml](configs/stages/pretrained.yaml), [stages/evaluation.yaml](configs/stages/evaluation.yaml) |
-| **Report section** | §1 Data + reproducibility | **§2 [20]** | **§3 [15]** + §4 training **[25]** | **§5 [20]** + **§6 [20]** |
+## Reproducing the results
 
-`*` Shared file — PR + one review before changing. Member 1 is custodian of `contracts/`;
-Member 2 owns `registry.py`, but Member 4 appends the pretrained entries.
+- **The submitted notebooks:** [`submission/Misclassified_A03_EN3150/`](submission/Misclassified_A03_EN3150/)
+  holds seven notebooks that contain all their code. Run them in order, locally or on Google Colab;
+  its README gives the steps. Training takes about 40 minutes on a T4.
+- **The development setup:** the library in `src/edgecnn/`, its notebooks, configuration and tests.
+  See [DEVELOPMENT.md](DEVELOPMENT.md).
 
-**No two members edit the same file** — notebooks included. If you find yourself needing to, the
-contract is probably wrong. Raise it rather than working around it.
+Every random choice uses seed 42, and the split's SHA-256 fingerprint is checked before training.
+On a T4, three complete training runs produced identical accuracies, losses and confusion matrices;
+only the timings differed. The latencies above come from the submission run; the development run's
+latencies in `results/` were measured in an earlier session and differ by a few percent.
 
----
+## Repository map
 
-## The five seams
+| Path | Contents |
+|---|---|
+| [`submission/Misclassified_A03_EN3150/`](submission/Misclassified_A03_EN3150/) | the code we submit, with its results |
+| [`notebooks/`](notebooks/) | the development notebooks, one per assignment part, with the outputs of their official runs |
+| [`src/edgecnn/`](src/edgecnn/) | the library those notebooks call: data, models, training, evaluation |
+| [`configs/`](configs/) | the settings of every run |
+| [`data/splits/`](data/splits/) | the train / validation / test split, committed |
+| [`results/`](results/) | metrics, figures and tables of the development runs |
+| [`tests/`](tests/) | automated tests |
+| [`tools/`](tools/) | building, checking and running the submission |
+| [`report/`](report/) | the report |
 
-This is the important part. Members do not read each other's *code*. They exchange these five
-artifacts, each with a schema enforced at runtime and in the test suite.
+Developer documentation: [DEVELOPMENT.md](DEVELOPMENT.md) (how the project is organised),
+[CONTRIBUTING.md](CONTRIBUTING.md) (workflow), [COLAB.md](COLAB.md) (running on Colab) and
+[SUBMISSION.md](SUBMISSION.md) (how the submission is built).
 
-```
-  M1 ──(1)──► M2 ──(2)──► M3 ──(3)──► evaluation ──(4)──► M4 ──(5)──► report
-  data        models      training         ▲            reporting
-    │                                      │
-    └────── metrics + benchmark (M1) ──────┘
-```
+## References
 
-| # | Seam | Producer → Consumer | Carrier | Schema |
-|---|---|---|---|---|
-| **1** | Data | M1 → M2, M3, M4 | `DataBundle` + `data/splits/split_manifest.csv` | [split_manifest](configs/contracts/split_manifest.schema.json), [split_meta](configs/contracts/split_meta.schema.json), [norm_stats](configs/contracts/norm_stats.schema.json) |
-| **2** | Models | M2, M4 → M3 | `build_model_from_config()` → `nn.Module` returning **raw logits** | [protocols.py](src/edgecnn/contracts/protocols.py) |
-| **3** | Training | M3 → M1, M4 | `best.pt` + `history.json` | [history](configs/contracts/history.schema.json) |
-| **4** | Evaluation | M1 → M4 | `test_metrics.json` + `resources.json` | [test_metrics](configs/contracts/test_metrics.schema.json), [resources](configs/contracts/resources.schema.json) |
-| **5** | Reporting | M4 → report | `results/tables/*.md` + `results/figures/*.png` | — |
-
-### Seam 1 — the data contract
-
-```python
-from edgecnn.data import build_dataloaders
-data = build_dataloaders(cfg)        # -> edgecnn.contracts.DataBundle
-```
-
-Every batch, every split, every model:
-
-```
-images : float32, shape (B, 3, 64, 64), normalised with TRAIN-ONLY statistics
-labels : int64,   shape (B,),           values in [0, num_classes)
-```
-
-`data/splits/split_manifest.csv` is the single source of truth for which image is in which split,
-with columns `relative_path, label_index, label_name, split`. It is drawn **once**, committed, and
-never redrawn. That is what makes the final comparison valid: an accuracy difference between Model B
-and MobileNetV2 is down to the architecture, not the data.
-
-### Seam 2 — the model contract
-
-```python
-from edgecnn.models import build_model_from_config
-model = build_model_from_config(cfg, num_classes=data.num_classes)
-```
-
-Every registered model — hand-written or from torchvision — takes `(B,3,64,64)` and returns **raw
-logits** `(B, num_classes)`. **No softmax inside the model.** `CrossEntropyLoss` applies log-softmax
-itself. A model that also softmaxes trains on a double-softmaxed signal: it does not crash, it just
-quietly underperforms. Keeping the exponential out of the model is also part of the §2
-hardware-aware activation argument.
-
-`build_model_from_config` reads the model's settings from the config and seeds the weights. The
-model trained in notebook `03` is therefore exactly the architecture profiled in `06`. The trainer
-never imports a model module, which keeps one training loop for all four architectures.
-
-### Seams 3–5 — the `run_id` convention
-
-```
-run_id = "{model}__{optimizer}__seed{seed}"      e.g.  model_b__sgd_momentum__seed42
-```
-
-Derived in exactly one place — [`contracts/paths.py`](src/edgecnn/contracts/paths.py) — so
-producers write where consumers read. **Nobody builds a path string by hand.** A typo there produces
-an empty table the day before submission, and fails silently, because a glob that matches nothing
-raises nothing.
-
-```
-artifacts/checkpoints/<run_id>/best.pt        git-ignored (large)
-artifacts/checkpoints/_debug/<run_id>/        git-ignored - synthetic and debug runs only
-results/metrics/<run_id>/history.json         COMMITTED  (notebooks 03-05)
-results/metrics/<run_id>/test_metrics.json    COMMITTED  (notebooks 03-05)
-results/metrics/<run_id>/resources.json       COMMITTED  (notebook 06)
-results/figures/<run_id>/*.png                COMMITTED
-```
-
-Metrics JSON is committed deliberately. Member 4 cannot build the §6 comparison table without
-everyone's numbers, and nobody should re-run 30 epochs of training to redraw a table.
-
-### How the contract is enforced
-
-Schemas in [configs/contracts/](configs/contracts/) are validated at runtime: producers write through
-`schema.write_json` and consumers read through `schema.read_json`, so a malformed artifact never
-reaches disk. `pytest tests/contracts` checks them again, along with the config layout and the
-notebooks' structure.
-
-**A schema failure is a broken interface, not a bug in your code.** Tell whoever owns the producing
-stage. Do not quietly adapt around it.
-
----
-
-## Phase 0 — before anyone writes a model
-
-The horizontal split only works because of this. Without it, Members 3 and 4 would sit idle waiting
-for Members 1 and 2.
-
-1. **Freeze the contracts together.** Read [`src/edgecnn/contracts/`](src/edgecnn/contracts/) and
-   [`configs/contracts/`](configs/contracts/) as a group. This is the one meeting that matters.
-2. **Member 1 ships the synthetic fixture first** — `make_synthetic_fixture` in
-   [data/synthetic.py](src/edgecnn/data/synthetic.py), the synthetic branch of
-   `build_dataloaders`, and `apply_style`. With `MODE = "synthetic"`, **every notebook then has working
-   data within the first hour**, before EuroSAT has downloaded anywhere.
-3. **Member 2 ships shape-only model stubs**: correct output shape, random weights, tiny. Member 3's
-   notebook `03` then trains end to end straight away.
-
-After Phase 0, all four work in parallel with no blocking dependency. The full stage plan, and the
-gate for each stage, is in [CONTRIBUTING.md §7](CONTRIBUTING.md#7-official-runs).
-
----
-
-## Experiment matrix — 6 required runs
-
-All at 64×64, `seed: 42`, 30 epochs (≥20 required), identical splits.
-
-| run_id | Notebook | Owner | Serves |
-|---|---|---|---|
-| `model_b__sgd__seed42` | `03_optimizer_study` | M3 | §3 (a) plain SGD |
-| `model_b__sgd_momentum__seed42` | `03_optimizer_study` | M3 | §3 (b) momentum |
-| `model_b__adam__seed42` | `03_optimizer_study` | M3 | §3 chosen optimizer · §4 · §6 baseline |
-| `model_a__adam__seed42` | `04_custom_training_evaluation` | M3 | §4 Model A vs Model B |
-| `mobilenet_v2__adam__seed42` | `05_pretrained_finetuning` | M4 | §5 · §6 |
-| `squeezenet1_1__adam__seed42` | `05_pretrained_finetuning` | M4 | §5 · §6 |
-
-**Official run order:** `01` → `02` → `03` → `04` → `05` → `06` → `07`. `06` then profiles all four
-architectures in one CPU session, and `07` builds every table.
-
-Optional if compute allows: the same three-optimizer sweep on Model A.
-
-### One decision to defend in §6
-
-The pretrained backbones are fine-tuned at **64×64**, not upsampled to their native 224. This keeps
-the memory and compute comparison honest: the point is the cost at the resolution the sensor
-actually produces. The handicap is real, and it is a finding rather than a flaw. MobileNetV2's 32×
-total stride leaves a 2×2 feature map at this resolution, so it cannot use the depth it was designed
-around. Set `pretrained.input_resolution: 128` to run that ablation.
-
----
-
-## Assignment requirements → where they live
-
-| § | Requirement | Marks | Owner | Notebook | Library |
-|---|---|---|---|---|---|
-| 1 | Dataset ≤64×64, 70/15/15 splits | — | M1 | `01` | [data/](src/edgecnn/data/) |
-| 2 | Model A standard CNN; Model B depthwise-separable ≤100k params; activation justification | 20 | M2 | `02` | [models/custom/](src/edgecnn/models/custom/) |
-| 3 | Chosen optimizer vs SGD vs SGD+momentum | 15 | M3 | `03` | [training/](src/edgecnn/training/) |
-| 4 | ≥20 epochs, loss curves, accuracy/confusion/precision/recall, A-vs-B table | 25 | M3 + M1 | `04`, `06`, `07` | [training/](src/edgecnn/training/), [evaluation/](src/edgecnn/evaluation/) |
-| 5 | Fine-tune two lightweight SOTA backbones, same splits | 20 | M4 | `05` | [models/pretrained/](src/edgecnn/models/pretrained/) |
-| 6 | Model B vs SOTA — accuracy / memory / compute trade-off | 20 | M4 | `06`, `07` | [evaluation/reporting.py](src/edgecnn/evaluation/reporting.py) |
-
-Model B's 100,000-parameter cap is asserted by
-[tests/test_param_budget.py](tests/test_param_budget.py), not read off a printout.
-
----
-
-## Repository layout
-
-```text
-EN3150-Assignment-03-CNN/
-├── README.md                  this file — split, seams, run matrix
-├── CONTRIBUTING.md            the developer guide: setup, workflow, git, official runs
-├── COLAB.md                   running notebooks on Colab's GPU: setup, handover, troubleshooting
-├── SUBMISSION.md              how the final code notebook is built, and what it must not contain
-├── .env.example               the per-member Colab Secrets, by name; a filled-in `.env` is git-ignored
-├── pyproject.toml             package `edgecnn`; the only reason to reinstall
-├── notebooks/
-│   ├── 00_setup … 07_final_comparison.ipynb   one per section; the official drivers
-│   └── scratch/               personal prototyping notebooks
-├── configs/
-│   ├── base.yaml              seed, device, paths, image size, MODE presets
-│   ├── stages/                one per stage — settings + that stage's I/O declaration
-│   ├── experiments/           one file per run: its model and optimizer
-│   └── contracts/             JSON Schemas — the on-disk seam formats
-├── data/{raw,processed,splits}/
-├── src/edgecnn/
-│   ├── contracts/             FROZEN — types, protocols, paths, schema
-│   ├── config/                base ← stage ← experiment ← mode
-│   ├── data/                  M1
-│   ├── models/                registry.py + custom/ (M2) + pretrained/ (M4)
-│   ├── training/              M3
-│   ├── evaluation/            M1 metrics+benchmark · M3 curves · M4 reporting
-│   └── utils/                 M1 — seeding, device, logging, Colab
-├── tests/{contracts,fixtures}/
-├── artifacts/{checkpoints,exports}/
-├── results/{figures,metrics,tables}/
-└── report/figures/
-```
-
-Every folder has a `README.md` naming its owner, its inputs and its outputs.
-
-## Reproducibility rules
-
-- Only `MODE = "official"` writes results. Official notebooks are committed after one clean
-  Restart & Run All.
-- The test set stays sealed until final evaluation: the trainer never constructs a loader over it.
-- Preprocessing statistics are fitted on the training split only. The schema pins `fitted_on` to
-  `"train"`, so the mistake cannot be committed silently.
-- The split definition and its seed live in `data/splits/` and are committed.
-- Every committed run uses `seed: 42`. Models are seeded when they are built, so results do not
-  depend on which notebook cells ran first.
-- Parameter counts, model sizes, latencies and the hardware are measured for every model by one code
-  path, in one session, and recorded in `resources.json`.
-- Commit regularly — the assignment grades sustained development history.
+- P. Helber, B. Bischke, A. Dengel and D. Borth, "EuroSAT: A Novel Dataset and Deep Learning
+  Benchmark for Land Use and Land Cover Classification", IEEE Journal of Selected Topics in Applied
+  Earth Observations and Remote Sensing, 2019.
+- M. Sandler, A. Howard, M. Zhu, A. Zhmoginov and L.-C. Chen, "MobileNetV2: Inverted Residuals and
+  Linear Bottlenecks", CVPR 2018.
+- F. N. Iandola, S. Han, M. W. Moskewicz, K. Ashraf, W. J. Dally and K. Keutzer, "SqueezeNet:
+  AlexNet-level accuracy with 50x fewer parameters and <0.5MB model size", arXiv:1602.07360, 2016.
